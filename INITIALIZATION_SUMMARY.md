@@ -7,7 +7,9 @@ Your Food Ordering Microservices system has been successfully initialized and is
 ## ✨ What Has Been Set Up
 
 ### 1. **Maven Dependencies** ✅
+
 All services now include:
+
 - Spring Boot 3 & Spring Framework
 - Spring Cloud (Gateway, Feign Client, Load Balancer)
 - Spring Security & JWT (JJWT library)
@@ -18,7 +20,9 @@ All services now include:
 - Testing frameworks (JUnit)
 
 ### 2. **Application Configuration** ✅
+
 Each service has a fully configured `application.properties`:
+
 - Server ports configured
 - Database setup (H2 in-memory)
 - JWT & Security settings
@@ -28,14 +32,18 @@ Each service has a fully configured `application.properties`:
 - Resilience4j circuit breaker settings
 
 ### 3. **Docker Containerization** ✅
+
 Multi-stage Dockerfiles for all services:
+
 - Efficient Maven build stage
 - Lightweight runtime image (Eclipse Temurin 17-jdk-alpine)
 - Health checks configured
 - Optimized for cloud deployment
 
 ### 4. **CI/CD Pipeline** ✅
+
 GitHub Actions workflow (`.github/workflows/deploy.yml`):
+
 - Build & Test stage
 - Security scanning (SonarCloud/Snyk/Trivy)
 - Docker image build & push to GHCR
@@ -44,11 +52,13 @@ GitHub Actions workflow (`.github/workflows/deploy.yml`):
 - Pipeline summary reporting
 
 ### 5. **Code Structure** ✅
+
 Each service has a professional package structure:
+
 ```
 src/main/java/com/example/
 ├── entity/          # JPA entities
-├── dto/             # Data transfer objects  
+├── dto/             # Data transfer objects
 ├── repository/      # Data access layer
 ├── service/         # Business logic (interfaces & implementations)
 ├── controller/      # REST API endpoints
@@ -59,20 +69,25 @@ src/main/java/com/example/
 ```
 
 ### 6. **Service Integration** ✅
+
 - Order Service → Catalog Service integration (Feign client ready)
 - Payment Service → Order Service integration (Feign client ready)
 - API Gateway JWT filter ready for implementation
 - Resilience4j configured for safe inter-service communication
 
 ### 7. **Database Schemas** ✅
+
 JPA entities created for:
+
 - **Auth Service**: User (id, username, email, password_hash, role, timestamps)
 - **Catalog Service**: MenuItem (id, name, price, availability, category)
 - **Order Service**: Order (id, userId, totalAmount, status, timestamps)
 - **Payment Service**: Payment (id, orderId, amount, status, reference)
 
 ### 8. **API Contracts** ✅
+
 DTOs created for all endpoints:
+
 - LoginRequest/LoginResponse (Auth)
 - RegisterRequest (Auth)
 - MenuItemResponse (Catalog)
@@ -80,14 +95,18 @@ DTOs created for all endpoints:
 - PaymentRequest/PaymentResponse (Payment)
 
 ### 9. **Docker Compose** ✅
+
 Local development setup with all 5 services:
+
 - Service networking configured
 - Health checks for each service
 - Environment variables passed correctly
 - Dependency ordering
 
 ### 10. **Documentation** ✅
+
 Four comprehensive guides created:
+
 - **INITIALIZATION_GUIDE.md**: Overview & quick start
 - **AZURE_DEPLOYMENT_GUIDE.md**: Step-by-step cloud deployment
 - **CONFIGURATION_GUIDE.md**: Environment & testing setup
@@ -174,6 +193,7 @@ CTSE-Assignment-Microservices-Cloud-Deployments/
 ## 🎯 What's Ready to Implement
 
 ### Auth Service
+
 - [ ] Implement `JwtTokenProvider.generateToken()` - Generate JWT tokens
 - [ ] Implement `JwtTokenProvider.validateToken()` - Validate JWT tokens
 - [ ] Implement `AuthServiceImpl.register()` - User registration with password hashing
@@ -181,23 +201,27 @@ CTSE-Assignment-Microservices-Cloud-Deployments/
 - [ ] Implement `AuthController` endpoints - REST API endpoints
 
 ### Catalog Service
+
 - [ ] Implement `CatalogServiceImpl` methods - Item CRUD operations
 - [ ] Implement `CatalogController` endpoints - REST API endpoints
 - [ ] Add sample data initialization - Populate H2 with test menu items
 
 ### Order Service
+
 - [ ] Implement `OrderServiceImpl` methods - Order creation & retrieval
 - [ ] Implement `OrderController` endpoints - REST API endpoints
 - [ ] Implement Catalog Service Feign client calls - Price validation
 - [ ] Add JWT token extraction in controller - Get userId from token
 
 ### Payment Service
+
 - [ ] Implement `PaymentServiceImpl` methods - Payment processing
 - [ ] Implement `PaymentController` endpoints - REST API endpoints
 - [ ] Implement Order Service Feign client calls - Update order status
 - [ ] Add mock payment gateway simulation - Process payment logic
 
 ### API Gateway
+
 - [ ] Complete `JwtAuthenticationFilter` implementation - Token validation
 - [ ] Implement error handling filters - 401/403 responses
 - [ ] Add request/response logging - Correlation IDs
@@ -205,6 +229,7 @@ CTSE-Assignment-Microservices-Cloud-Deployments/
 ## 🚀 Next Steps
 
 ### 1. **Build & Test Locally**
+
 ```bash
 # Build all services
 mvn clean install
@@ -217,31 +242,38 @@ curl http://localhost:8080/actuator/health
 ```
 
 ### 2. **Implement Service Logic** (Per Team Member)
+
 Each team member implements their service:
+
 - Auth Service: Registration, Login, JWT generation
 - Catalog Service: CRUD operations for menu items
 - Order Service: Order creation with Catalog integration
 - Payment Service: Payment processing with Order integration
 
 ### 3. **Test Inter-Service Communication**
+
 - Order Service calls Catalog Service
 - Payment Service calls Order Service
 - Test with Postman/cURL
 
 ### 4. **Deploy to Azure**
+
 Follow `AZURE_DEPLOYMENT_GUIDE.md`:
+
 - Push images to GHCR
 - Create Container Apps resources
 - Configure environment variables
 - Test live endpoints
 
 ### 5. **Configure Security**
+
 - Complete JWT token validation in Gateway
 - Add RBAC (Role-Based Access Control)
 - Configure secrets in Azure
 - Test with/without authorization
 
 ### 6. **Set Up CI/CD**
+
 - Configure GitHub Actions secrets
 - Test automated build & deployment pipeline
 - Verify SonarCloud/Snyk integration
@@ -250,30 +282,35 @@ Follow `AZURE_DEPLOYMENT_GUIDE.md`:
 ## 📊 Architecture Highlights
 
 ✅ **Microservices Pattern**
+
 - Independent services per business domain
 - Own database per service
 - REST communication with Feign clients
 - Circuit breaker for resilience
 
 ✅ **Cloud-Native Design**
+
 - Containerized (Docker)
 - Container orchestration ready (Azure Container Apps)
 - Health checks & metrics
 - Horizontal scaling support
 
 ✅ **Security-First**
+
 - JWT authentication
 - API Gateway validation
 - Role-based access control ready
 - Secrets not in code
 
 ✅ **DevOps-Ready**
+
 - Automated CI/CD pipeline
 - Code quality scanning (SonarCloud)
 - Security scanning (Snyk/Trivy)
 - Automated deployment
 
 ✅ **Developer-Friendly**
+
 - Swagger/OpenAPI documentation
 - H2 in-memory database for local development
 - Docker Compose for local testing
@@ -282,16 +319,16 @@ Follow `AZURE_DEPLOYMENT_GUIDE.md`:
 
 ## 🔑 Key Configuration Details
 
-| Aspect | Details |
-|--------|---------|
-| **Port Configuration** | Gateway: 8080, Services: 8081-8084 |
-| **Database** | H2 in-memory (dev), PostgreSQL (production ready) |
-| **Authentication** | JWT with JJWT library |
-| **Service Communication** | REST with Feign clients + Resilience4j |
-| **Container Registry** | GHCR (GitHub Container Registry) |
-| **Orchestration** | Azure Container Apps |
-| **Monitoring** | Spring Actuator + Azure Monitor |
-| **Logging** | Application logs + Cloud logging |
+| Aspect                    | Details                                           |
+| ------------------------- | ------------------------------------------------- |
+| **Port Configuration**    | Gateway: 8080, Services: 8081-8084                |
+| **Database**              | H2 in-memory (dev), PostgreSQL (production ready) |
+| **Authentication**        | JWT with JJWT library                             |
+| **Service Communication** | REST with Feign clients + Resilience4j            |
+| **Container Registry**    | GHCR (GitHub Container Registry)                  |
+| **Orchestration**         | Azure Container Apps                              |
+| **Monitoring**            | Spring Actuator + Azure Monitor                   |
+| **Logging**               | Application logs + Cloud logging                  |
 
 ## 📚 Documentation Available
 
@@ -336,6 +373,7 @@ open http://localhost:8081/swagger-ui.html
 ## 📞 Support & Troubleshooting
 
 See `CONFIGURATION_GUIDE.md` for:
+
 - Troubleshooting common issues
 - cURL command examples
 - Load testing instructions

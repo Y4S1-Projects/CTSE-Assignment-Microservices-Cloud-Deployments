@@ -61,6 +61,7 @@ docker-compose up --build
 ```
 
 Services will be available at:
+
 - API Gateway: http://localhost:8080
 - Auth Service: http://localhost:8081
 - Catalog Service: http://localhost:8082
@@ -87,6 +88,7 @@ cd payment-service && mvn spring-boot:run
 ### 1. Auth Service (Port 8081)
 
 **Endpoints:**
+
 - `POST /auth/register` - User registration
 - `POST /auth/login` - User login (returns JWT token)
 - `GET /users/me` - Get current user profile (JWT required)
@@ -94,6 +96,7 @@ cd payment-service && mvn spring-boot:run
 
 **Database**: H2 (in-memory)
 **Features**:
+
 - JWT token generation and validation
 - User registration and authentication
 - Role-based access control (USER, ADMIN)
@@ -101,6 +104,7 @@ cd payment-service && mvn spring-boot:run
 ### 2. Catalog Service (Port 8082)
 
 **Endpoints:**
+
 - `GET /catalog/items` - List all menu items
 - `GET /catalog/items/{id}` - Get specific item
 - `GET /catalog/items/category/{category}` - Filter by category
@@ -108,6 +112,7 @@ cd payment-service && mvn spring-boot:run
 
 **Database**: H2 (in-memory)
 **Features**:
+
 - Menu item management
 - Availability tracking
 - Category filtering
@@ -115,6 +120,7 @@ cd payment-service && mvn spring-boot:run
 ### 3. Order Service (Port 8083)
 
 **Endpoints:**
+
 - `POST /orders` - Create new order (JWT required)
 - `GET /orders/{id}` - Get order details
 - `GET /orders/my` - Get user's orders (JWT required)
@@ -122,42 +128,50 @@ cd payment-service && mvn spring-boot:run
 
 **Database**: H2 (in-memory)
 **Features**:
+
 - Order creation with item validation
 - Integration with Catalog Service (Feign client)
 - Order status tracking
 - Support for payment integration
 
 **Integration Points**:
+
 - Calls Catalog Service to validate items and get prices
 - Called by Payment Service to update status
 
 ### 4. Payment Service (Port 8084)
 
 **Endpoints:**
+
 - `POST /payments/charge` - Process payment (JWT required)
 - `GET /payments/{orderId}` - Get payment status
 
 **Database**: H2 (in-memory)
 **Features**:
+
 - Mock payment processing
 - Payment status tracking
 - Integration with Order Service (Feign client)
 
 **Integration Points**:
+
 - Calls Order Service to update order status to PAID
 
 ### 5. API Gateway (Port 8080)
 
 **Public Endpoints**:
+
 - `/auth/**` - Routes to Auth Service
 - `/actuator/health` - Health check
 
 **Protected Endpoints** (require JWT):
+
 - `/catalog/**` - Routes to Catalog Service
 - `/orders/**` - Routes to Order Service
 - `/payments/**` - Routes to Payment Service
 
 **Features**:
+
 - Gateway-level JWT authentication
 - Request routing
 - Load balancing
@@ -179,17 +193,18 @@ For Cloud deployment, set this in Azure Container Apps secrets.
 
 ```json
 {
-  "userId": "user-id-uuid",
-  "username": "username",
-  "roles": ["USER"],
-  "iat": 1234567890,
-  "exp": 1234654290
+	"userId": "user-id-uuid",
+	"username": "username",
+	"roles": ["USER"],
+	"iat": 1234567890,
+	"exp": 1234654290
 }
 ```
 
 ### Service-to-Service Communication
 
 Feign clients with built-in resilience:
+
 - Circuit breaker pattern with Resilience4j
 - Timeout: 3 seconds
 - Retry attempts with exponential backoff
@@ -291,6 +306,7 @@ SERVICE_URL             # Deployed service URL for smoke tests
 ## 📝 Database Schema (H2)
 
 ### Users Table
+
 ```sql
 CREATE TABLE users (
   id UUID PRIMARY KEY,
@@ -306,6 +322,7 @@ CREATE TABLE users (
 ```
 
 ### Menu Items Table
+
 ```sql
 CREATE TABLE items (
   id UUID PRIMARY KEY,
@@ -321,6 +338,7 @@ CREATE TABLE items (
 ```
 
 ### Orders Table
+
 ```sql
 CREATE TABLE orders (
   id UUID PRIMARY KEY,
@@ -333,6 +351,7 @@ CREATE TABLE orders (
 ```
 
 ### Payments Table
+
 ```sql
 CREATE TABLE payments (
   id UUID PRIMARY KEY,
@@ -422,17 +441,20 @@ curl http://localhost:8080/actuator/metrics
 ## 🤝 Team Collaboration
 
 ### Code Structure
+
 - Each service has independent Java package structure
 - Controllers → Services → Repositories pattern (DDD)
 - DTOs for API contracts
 - Entities for database models
 
 ### API Contracts
+
 - OpenAPI specs in `springdoc-openapi`
 - Consistent request/response formats
 - Error handling with HTTP status codes
 
 ### Dependency Management
+
 - Maven BOM for Spring Cloud dependencies
 - Resilience4j for circuit breakers
 - JJWT for JWT operations
@@ -441,17 +463,20 @@ curl http://localhost:8080/actuator/metrics
 ## 🐛 Troubleshooting
 
 ### Service fails to start
+
 1. Check if port is already in use: `netstat -ano | findstr :8080`
 2. Verify Java version: `java -version` (should be 17+)
 3. Check Maven: `mvn -version`
 4. Clean Maven cache: `mvn clean install`
 
 ### Connection refused between services
+
 1. Ensure all services are running
 2. Check service URLs in `application.properties`
 3. Verify Docker network if using Docker Compose
 
 ### JWT token validation fails
+
 1. Ensure `JWT_SECRET` environment variable is set
 2. Check token format: should be `Bearer <token>`
 3. Verify token expiration

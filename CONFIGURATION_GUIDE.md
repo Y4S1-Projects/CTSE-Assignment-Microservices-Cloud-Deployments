@@ -33,12 +33,12 @@ GITHUB_ORGANIZATION=your-organization
 
 Default ports for each service:
 
-| Service | Port | Health Endpoint |
-|---------|------|-----------------|
-| API Gateway | 8080 | http://localhost:8080/actuator/health |
-| Auth Service | 8081 | http://localhost:8081/actuator/health |
+| Service         | Port | Health Endpoint                       |
+| --------------- | ---- | ------------------------------------- |
+| API Gateway     | 8080 | http://localhost:8080/actuator/health |
+| Auth Service    | 8081 | http://localhost:8081/actuator/health |
 | Catalog Service | 8082 | http://localhost:8082/actuator/health |
-| Order Service | 8083 | http://localhost:8083/actuator/health |
+| Order Service   | 8083 | http://localhost:8083/actuator/health |
 | Payment Service | 8084 | http://localhost:8084/actuator/health |
 
 ## Database Configuration
@@ -48,6 +48,7 @@ Each service uses H2 in-memory database by default:
 ### H2 Console Access
 
 Add this to your browser after starting a service:
+
 ```
 http://localhost:8081/h2-console (Auth Service)
 http://localhost:8082/h2-console (Catalog Service)
@@ -56,6 +57,7 @@ http://localhost:8084/h2-console (Payment Service)
 ```
 
 **Default H2 Credentials:**
+
 - Driver Class: `org.h2.Driver`
 - JDBC URL: `jdbc:h2:mem:<service-name>db`
 - User: `sa`
@@ -84,6 +86,7 @@ Each service provides interactive API documentation:
 - Payment Service: http://localhost:8084/swagger-ui.html
 
 OpenAPI JSON specs:
+
 - Auth Service: http://localhost:8081/v3/api-docs
 - Catalog Service: http://localhost:8082/v3/api-docs
 - Order Service: http://localhost:8083/v3/api-docs
@@ -147,21 +150,23 @@ done
 Use https://jwt.io to generate test tokens:
 
 **Header:**
+
 ```json
 {
-  "alg": "HS256",
-  "typ": "JWT"
+	"alg": "HS256",
+	"typ": "JWT"
 }
 ```
 
 **Payload:**
+
 ```json
 {
-  "userId": "550e8400-e29b-41d4-a716-446655440000",
-  "username": "testuser",
-  "roles": ["USER"],
-  "iat": 1700000000,
-  "exp": 1800000000
+	"userId": "550e8400-e29b-41d4-a716-446655440000",
+	"username": "testuser",
+	"roles": ["USER"],
+	"iat": 1700000000,
+	"exp": 1800000000
 }
 ```
 

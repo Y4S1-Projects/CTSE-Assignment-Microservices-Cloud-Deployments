@@ -11,7 +11,7 @@ Welcome! This document provides an overview of all setup files and where to star
    - 2-minute quick start instructions
    - Success metrics and next steps
 
-2. **[INITIALIZATION_GUIDE.md](INITIALIZATION_GUIDE.md)** 
+2. **[INITIALIZATION_GUIDE.md](INITIALIZATION_GUIDE.md)**
    - Detailed architecture overview
    - Service descriptions and endpoints
    - Local development instructions
@@ -119,6 +119,7 @@ CTSE-Assignment-Microservices-Cloud-Deployments/
 ## ✅ What's Been Set Up (100% Complete)
 
 ### ✨ Infrastructure
+
 - ✅ All 5 services have Maven pom.xml with complete dependencies
 - ✅ All application.properties files configured with correct ports
 - ✅ Docker multi-stage Dockerfiles for each service
@@ -126,30 +127,35 @@ CTSE-Assignment-Microservices-Cloud-Deployments/
 - ✅ GitHub Actions CI/CD pipeline template
 
 ### 🗄️ Database Layer
+
 - ✅ JPA entities created (User, MenuItem, Order, Payment)
 - ✅ Spring Data repositories ready
 - ✅ H2 in-memory databases configured for each service
 - ✅ Database schemas designed
 
 ### 🔌 API Layer
+
 - ✅ REST controller shells created for each service
 - ✅ DTOs created for all endpoints
 - ✅ Swagger/OpenAPI annotations added
 - ✅ Service interfaces defined
 
 ### 🔗 Integration
+
 - ✅ Feign clients configured (Order→Catalog, Payment→Order)
 - ✅ Resilience4j circuit breaker setup
 - ✅ Service-to-service URL configuration ready
 - ✅ JWT filter framework in API Gateway
 
 ### 🔐 Security
+
 - ✅ Spring Security configured
 - ✅ JWT (JJWT) library added to all services
 - ✅ JWT token provider skeleton created
 - ✅ API Gateway authentication filter skeleton
 
 ### 📚 Documentation
+
 - ✅ Quick start guide (GETTING_STARTED.md)
 - ✅ Architecture overview (INITIALIZATION_GUIDE.md)
 - ✅ Azure deployment guide (AZURE_DEPLOYMENT_GUIDE.md)
@@ -161,6 +167,7 @@ CTSE-Assignment-Microservices-Cloud-Deployments/
 ## 🎯 Implementation Roadmap
 
 ### Stage 1: Authentication (Auth Service)
+
 ```
 Priority: HIGHEST - Everything depends on this
 
@@ -176,6 +183,7 @@ Time: 6-8 hours
 ```
 
 ### Stage 2: Menu Catalog (Catalog Service)
+
 ```
 Priority: HIGH - Needed for orders
 
@@ -190,6 +198,7 @@ Time: 4-6 hours
 ```
 
 ### Stage 3: Order Management (Order Service)
+
 ```
 Priority: HIGH - Core business logic
 
@@ -204,6 +213,7 @@ Time: 6-8 hours
 ```
 
 ### Stage 4: Payment Processing (Payment Service)
+
 ```
 Priority: MEDIUM - Integration testing
 
@@ -218,6 +228,7 @@ Time: 4-6 hours
 ```
 
 ### Stage 5: Gateway & Integration (API Gateway)
+
 ```
 Priority: HIGH - Ties everything together
 
@@ -232,6 +243,7 @@ Time: 4-6 hours
 ```
 
 ### Stage 6: Cloud Deployment
+
 ```
 Priority: MEDIUM - After functionality complete
 
@@ -250,6 +262,7 @@ Time: 2-4 hours
 ## 🚀 Quick Commands
 
 ### Get Started Quickly
+
 ```bash
 # 1. View all services
 docker-compose ps
@@ -268,6 +281,7 @@ curl http://localhost:8080/actuator/health
 ```
 
 ### Maven Operations
+
 ```bash
 # Build all
 mvn clean install
@@ -283,6 +297,7 @@ mvn dependency:tree
 ```
 
 ### Docker Operations
+
 ```bash
 # Build all images
 docker-compose build
@@ -321,11 +336,13 @@ Internal Communication:
 ## 🔧 Key Configuration Files
 
 ### Per Service
+
 - `src/main/resources/application.properties` - Service config
 - `pom.xml` - Maven dependencies
 - `Dockerfile` - Container image
 
 ### Shared
+
 - `docker-compose.yml` - Local dev environment
 - `.github/workflows/deploy.yml` - CI/CD pipeline
 - `.dockerignore` - Docker build optimization
@@ -336,12 +353,14 @@ Internal Communication:
 ## 🧪 Testing Checklist
 
 ### Local Testing
+
 - [ ] All services start with `docker-compose up --build`
 - [ ] Health endpoints respond
 - [ ] Swagger UI accessible for each service
 - [ ] H2 console accessible for databases
 
 ### Integration Testing
+
 - [ ] Can register user (Auth Service)
 - [ ] Can login and get JWT token
 - [ ] Can browse menu items (Catalog Service)
@@ -349,6 +368,7 @@ Internal Communication:
 - [ ] Can process payment (Payment Service calls Order)
 
 ### Cloud Testing
+
 - [ ] Images push to GHCR successfully
 - [ ] Deploy to Azure Container Apps works
 - [ ] Services communicate across cloud
@@ -360,23 +380,27 @@ Internal Communication:
 ## 📞 Getting Help
 
 ### For Setup Issues
+
 - Read: [GETTING_STARTED.md](GETTING_STARTED.md)
 - Check: [CONFIGURATION_GUIDE.md](CONFIGURATION_GUIDE.md)
 - Review: Service's HELP.md file
 
 ### For Implementation
+
 - Check the `// TODO:` comments in the code
 - Review Swagger UI for endpoint definitions
 - Examine entity and DTO structures
 - Look at existing test files
 
 ### For Deployment
+
 - Read: [AZURE_DEPLOYMENT_GUIDE.md](AZURE_DEPLOYMENT_GUIDE.md)
 - Follow step-by-step instructions
 - Don't skip the registry setup step
 - Test each service individually first
 
 ### For Debugging
+
 ```bash
 # View service logs
 docker-compose logs service-name
@@ -478,6 +502,7 @@ Week 6:
 ## 📞 Support
 
 For each service, there's a `HELP.md` file:
+
 - `api-gateway/HELP.md`
 - `auth-service/HELP.md`
 - `catalog-service/HELP.md`

@@ -42,6 +42,7 @@ az containerapp env create \
 ```
 
 This will create:
+
 - Log Analytics workspace for monitoring
 - Azure Container Apps environment
 - Virtual network for internal communication
@@ -396,6 +397,7 @@ az containerapp update \
 ### GitHub Actions with Azure OIDC
 
 1. **Create Azure Service Principal**:
+
 ```bash
 SUBSCRIPTION_ID=$(az account show --query id -o tsv)
 APP_ID=$(az ad app create --display-name "ctse-deployment" --query appId -o tsv)
@@ -407,6 +409,7 @@ az role assignment create \
 ```
 
 2. **Add GitHub Secrets**:
+
 ```
 AZURE_CLIENT_ID: <app-id>
 AZURE_TENANT_ID: <tenant-id>
@@ -482,6 +485,7 @@ az containerapp delete -n api-gateway -g $RESOURCE_GROUP
 ## 🆘 Troubleshooting
 
 ### Image Pull Failed
+
 ```bash
 # Check registry credentials
 az containerapp registry list -g $RESOURCE_GROUP
@@ -496,6 +500,7 @@ az containerapp registry update \
 ```
 
 ### Service Unavailable
+
 ```bash
 # Check container app status
 az containerapp show -n auth-service -g $RESOURCE_GROUP -o json | jq '.properties.runningStatus'
@@ -505,6 +510,7 @@ az containerapp update -n auth-service -g $RESOURCE_GROUP --image <same-image>
 ```
 
 ### High Latency Between Services
+
 1. Ensure services are in the same Container Apps Environment
 2. Use internal service discovery (e.g., `http://auth-service:8081`)
 3. Check CPU and memory allocation
