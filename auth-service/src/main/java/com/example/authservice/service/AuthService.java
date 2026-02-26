@@ -5,12 +5,12 @@ import com.example.authservice.dto.LoginResponse;
 import com.example.authservice.dto.RegisterRequest;
 
 /**
- * AuthService interface
- * Implementation will be added during feature development
+ * AuthService interface for authentication operations
  */
 public interface AuthService {
     LoginResponse login(LoginRequest request);
     LoginResponse register(RegisterRequest request);
     boolean validateToken(String token);
-    String getUserIdFromToken(String token);
+    String extractUserId(String token);
+    String extractUsername(String token);
 }
