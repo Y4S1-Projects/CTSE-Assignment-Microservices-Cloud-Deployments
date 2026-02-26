@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - JWT_SECRET=your-super-secret-key-change-in-production-env
+    depends_on:
+      - auth-service
+      - catalog-service
+      - order-service
+      - payment-service
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      - JWT_SECRET=your-super-secret-key-change-in-production-env
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  catalog-service:
+    build:
+      context: ./catalog-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      - JWT_SECRET=your-super-secret-key-change-in-production-env
+      - SERVICE_AUTH_URL=http://auth-service:8081
+    depends_on:
+      - auth-service
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8083"
+    environment:
+      - JWT_SECRET=your-super-secret-key-change-in-production-env
+      - SERVICE_AUTH_URL=http://auth-service:8081
+      - SERVICE_CATALOG_URL=http://catalog-service:8082
+      - SERVICE_PAYMENT_URL=http://payment-service:8084
+    depends_on:
+      - auth-service
+      - catalog-service
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  payment-service:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+    ports:
+      - "8084:8084"
+    environment:
+      - JWT_SECRET=your-super-secret-key-change-in-production-env
+      - SERVICE_AUTH_URL=http://auth-service:8081
+      - SERVICE_ORDER_URL=http://order-service:8083
+    depends_on:
+      - auth-service
+      - order-service
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+networks:
+  microservices-network:
+    driver: bridge

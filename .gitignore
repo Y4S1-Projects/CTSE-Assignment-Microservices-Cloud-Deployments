@@ -1,4 +1,13 @@
+################################
+#  MAVEN & JAVA BUILD ARTIFACTS
+################################
 target/
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup
@@ -7,11 +16,167 @@ release.properties
 dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
-# https://maven.apache.org/wrapper/#usage-without-binary-jar
 .mvn/wrapper/maven-wrapper.jar
+*.classpath
 
-# Eclipse m2e generated files
-# Eclipse Core
+################################
+# IDE & EDITOR CONFIGURATION
+################################
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+*.log
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+.history/
+
+# Eclipse
 .project
-# JDT-specific (Eclipse Java Development Tools)
 .classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Sublime Text
+*.sublime-project
+
+# NetBeans
+.netbeans/
+nbdist/
+project.properties
+
+# Vim & Emacs
+.vim/
+*~
+.emacs*
+
+################################
+# OPERATING SYSTEM FILES
+################################
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.windows/
+
+# Linux
+.directory
+
+################################
+# APPLICATION & RUNTIME
+################################
+# Logs
+logs/
+*.log
+*.logs
+spring.log
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.h2.db
+*.h2.mv.db
+
+# H2 Console
+h2-console/
+
+# Application properties overrides
+application-local.properties
+application-dev.properties
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+################################
+# DOCKER & CONTAINER
+################################
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Container runtime files
+.dockerignore.bak
+
+################################
+# BUILD & DEPENDENCY MANAGEMENT
+################################
+# Build outputs
+build/
+dist/
+out/
+*.gradle
+
+# Dependency caches
+.gradle/
+node_modules/
+npm-debug.log
+yarn-error.log
+
+################################
+# IDE-SPECIFIC CACHES
+################################
+.cache/
+.venv/
+venv/
+env/
+ENV/
+
+################################
+# SECURITY & CREDENTIALS
+################################
+# Secrets and credentials
+.secrets
+*.pem
+*.key
+*.crt
+.ssh/
+secrets/
+
+################################
+# PROJECT-SPECIFIC
+################################
+# Maven wrapper (if not already excluded)
+.mvn/
+
+# Test coverage
+coverage/
+*.coverage
+
+# Local development configuration
+local.properties
+.DS_Store/
+
+# IDE history and temp files
+.history
+*.bak
+*.swo
+*.swp
+
+# Package lock files (optional - uncomment if needed)
+# package-lock.json
+# yarn.lock
+
+# Any IDE temp/cache directories
+**/.DS_Store
+**/.vscode
+**/.idea
+**/target
