@@ -1,56 +1,20 @@
 # 🌐 API Gateway - Food Ordering System
 
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![Spring Cloud Gateway](https://img.shields.io/badge/Spring%20Cloud%20Gateway-2024.0.0-blue.svg)](https://spring.io/projects/spring-cloud-gateway)
-[![Java](https://img.shields.io/badge/Java-17-orange.svg)](https://www.oracle.com/java/)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-
-> Central API Gateway for the Food Ordering Microservices System. Handles routing, authentication, rate limiting, CORS, and cross-cutting concerns.
-
----
-
-## 📋 Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Getting Started](#getting-started)
-- [Routes Configuration](#routes-configuration)
-- [Security](#security)
-- [Rate Limiting](#rate-limiting)
-- [CORS Configuration](#cors-configuration)
-- [Logging](#logging)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Troubleshooting](#troubleshooting)
+> **Main Documentation:** See [Main README](../README.md)
 
 ---
 
 ## 🎯 Overview
 
-The API Gateway serves as the single entry point for all client requests to the microservices ecosystem. It provides:
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![Spring Cloud Gateway](https://img.shields.io/badge/Spring%20Cloud%20Gateway-2024.0.0-blue.svg)](https://spring.io/projects/spring-cloud-gateway)
+[![Java](https://img.shields.io/badge/Java-17-orange.svg)](https://www.oracle.com/java/)
+[![Status](https://img.shields.io/badge/Status-Production%20Ready-success.svg)]()
 
-- **Unified Entry Point**: Single endpoint for all microservices
-- **Authentication & Authorization**: JWT token validation
-- **Rate Limiting**: Protection against abuse and DDoS
-- **CORS Handling**: Cross-origin resource sharing
-- **Request/Response Logging**: Centralized logging
-- **Load Balancing**: Distribute requests across service instances
-- **Circuit Breaking**: Fault tolerance and resilience
+**Port:** 8080  
+**Status:** ✅ Production Ready
 
-### Technology Stack
-
-| Component         | Technology           |
-| ----------------- | -------------------- |
-| **Framework**     | Spring Boot 3.x      |
-| **Gateway**       | Spring Cloud Gateway |
-| **Language**      | Java 17 (LTS)        |
-| **Security**      | JWT (JJWT 0.12.3)    |
-| **Rate Limiting** | Bucket4j 8.10.1      |
-| **API Docs**      | SpringDoc OpenAPI 3  |
-| **Build Tool**    | Maven 3.9+           |
-
----
+Central API Gateway for the Food Ordering Microservices System. Handles routing, authentication, rate limiting, and cross-cutting concerns.
 
 ## ✨ Features
 

@@ -1,53 +1,19 @@
 # 🔐 Auth Service - Food Ordering System
 
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![Java](https://img.shields.io/badge/Java-17-orange.svg)](https://www.oracle.com/java/)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-
-> Authentication and Authorization microservice for the Food Ordering System. Handles user registration, login, JWT token generation, and token validation.
-
----
-
-## 📋 Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Getting Started](#getting-started)
-- [API Endpoints](#api-endpoints)
-- [Configuration](#configuration)
-- [Database Schema](#database-schema)
-- [Security](#security)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Troubleshooting](#troubleshooting)
+> **Main Documentation:** See [Main README](../README.md)
 
 ---
 
 ## 🎯 Overview
 
-The Auth Service is a critical microservice responsible for:
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![Java](https://img.shields.io/badge/Java-17-orange.svg)](https://www.oracle.com/java/)
+[![Status](https://img.shields.io/badge/Status-Production%20Ready-success.svg)]()
 
-- **User Registration**: Creating new user accounts with secure password hashing
-- **User Authentication**: Validating credentials and issuing JWT tokens
-- **Token Management**: Generating, validating, and extracting information from JWT tokens
-- **User Authorization**: Supporting role-based access control (USER, ADMIN)
+**Port:** 8081  
+**Status:** ✅ Production Ready
 
-### Technology Stack
-
-| Component      | Technology                                 |
-| -------------- | ------------------------------------------ |
-| **Framework**  | Spring Boot 3.x                            |
-| **Language**   | Java 17 (LTS)                              |
-| **Security**   | Spring Security + JWT (JJWT 0.12.3)        |
-| **Database**   | H2 (development) / PostgreSQL (production) |
-| **ORM**        | Spring Data JPA                            |
-| **API Docs**   | SpringDoc OpenAPI 3 (Swagger)              |
-| **Build Tool** | Maven 3.9+                                 |
-
----
-
-## ✨ Features
+Authentication and Authorization microservice for the Food Ordering System. Handles user registration, login, JWT token generation, and token validation.
 
 ### Core Functionality
 
