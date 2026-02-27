@@ -1,4 +1,4 @@
-package com.example.authservice.util;
+package com.example.apigateway.util;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
@@ -9,46 +9,15 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Date;
+import java.util.List;
 
 @Component
-public class JwtTokenProvider {
-    private static final Logger logger = LoggerFactory.getLogger(JwtTokenProvider.class);
+public class JwtTokenValidator {
+    private static final Logger logger = LoggerFactory.getLogger(JwtTokenValidator.class);
 
     @Value("${app.jwt.secret:your-super-secret-key-change-in-production-env}")
     private String jwtSecret;
-
-    @Value("${app.jwt.expiration:86400000}")
-    private long jwtExpiration;
-
-    @Value("${app.jwt.issuer:food-ordering-system}")
-    private String jwtIssuer;
-
-    /**
-     * Generate JWT token with user details
-     * @param userId User ID
-     * @param username Username
-     * @param roles User roles
-     * @return JWT token string
-     */
-    public String generateToken(String userId, String username, List<String> roles) {
-        Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + jwtExpiration);
-
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("userId", userId);
-        claims.put("username", username);
-        claims.put("roles", roles);
-
-        return Jwts.builder()
-                .claims(claims)
-                .subject(username)
-                .issuedAt(now)
-                .expiration(expiryDate)
-                .issuer(jwtIssuer)
-                .signWith(getSigningKey())
-                .compact();
-    }
 
     /**
      * Validate JWT token
@@ -82,8 +51,13 @@ public class JwtTokenProvider {
      * @return User ID
      */
     public String extractUserId(String token) {
-        Claims claims = extractAllClaims(token);
-        return claims.get("userId", String.class);
+        try {
+            Claims claims = extractAllClaims(token);
+            return claims.get("userId", String.class);
+        } catch (Exception e) {
+            logger.error("Error extracting userId from token: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -92,8 +66,13 @@ public class JwtTokenProvider {
      * @return Username
      */
     public String extractUsername(String token) {
-        Claims claims = extractAllClaims(token);
-        return claims.getSubject();
+        try {
+            Claims claims = extractAllClaims(token);
+            return claims.getSubject();
+        } catch (Exception e) {
+            logger.error("Error extracting username from token: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -103,13 +82,30 @@ public class JwtTokenProvider {
      */
     @SuppressWarnings("unchecked")
     public List<String> extractRoles(String token) {
-        Claims claims = extractAllClaims(token);
-        Object rolesObj = claims.get("roles");
-        
-        if (rolesObj instanceof List) {
-            return (List<String>) rolesObj;
+        try {
+            Claims claims = extractAllClaims(token);
+            Object rolesObj = claims.get("roles");
+            if (rolesObj instanceof List) {
+                return (List<String>) rolesObj;
+            }
+        } catch (Exception e) {
+            logger.error("Error extracting roles from token: {}", e.getMessage());
         }
-        return new ArrayList<>();
+        return List.of();
+    }
+
+    /**
+     * Check if token is expired
+     * @param token JWT token string
+     * @return true if expired, false otherwise
+     */
+    public boolean isTokenExpired(String token) {
+        try {
+            Claims claims = extractAllClaims(token);
+            return claims.getExpiration().before(new Date());
+        } catch (Exception e) {
+            return true;
+        }
     }
 
     /**
@@ -127,24 +123,10 @@ public class JwtTokenProvider {
 
     /**
      * Get signing key from secret
-     * @return SecretKey for JWT signing
+     * @return SecretKey for JWT verification
      */
     private SecretKey getSigningKey() {
         byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
-    }
-
-    /**
-     * Check if token is expired
-     * @param token JWT token string
-     * @return true if expired, false otherwise
-     */
-    public boolean isTokenExpired(String token) {
-        try {
-            Claims claims = extractAllClaims(token);
-            return claims.getExpiration().before(new Date());
-        } catch (Exception e) {
-            return true;
-        }
     }
 }
