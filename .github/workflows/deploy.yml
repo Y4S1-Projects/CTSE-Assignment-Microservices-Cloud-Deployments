@@ -116,6 +116,36 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # ==================== MANUAL DEPLOYMENT NOTICE ====================
+  manual-deployment-notice:
+    runs-on: ubuntu-latest
+    needs: build-docker
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Check Deployment Status
+        run: |
+          echo "🎉 ✅ Docker images built successfully and pushed to GitHub Container Registry!"
+          echo ""
+          echo "📦 Container Images Ready:"
+          echo "  • ghcr.io/${{ github.repository_owner }}/ctse-assignment-microservices-cloud-deployments/api-gateway:${{ github.sha }}"
+          echo "  • ghcr.io/${{ github.repository_owner }}/ctse-assignment-microservices-cloud-deployments/auth-service:${{ github.sha }}"
+          echo "  • ghcr.io/${{ github.repository_owner }}/ctse-assignment-microservices-cloud-deployments/catalog-service:${{ github.sha }}"
+          echo "  • ghcr.io/${{ github.repository_owner }}/ctse-assignment-microservices-cloud-deployments/order-service:${{ github.sha }}"
+          echo "  • ghcr.io/${{ github.repository_owner }}/ctse-assignment-microservices-cloud-deployments/payment-service:${{ github.sha }}"
+          echo ""
+          echo "⚠️  AZURE_CREDENTIALS secret not configured - Automatic deployment skipped"
+          echo ""
+          echo "🚀 To deploy to Azure manually:"
+          echo "1. Open PowerShell on your local machine"
+          echo "2. Navigate to your project directory"
+          echo "3. Run: az login"
+          echo "4. Run: .\deploy-azure.ps1"
+          echo ""
+          echo "📖 See GITHUB_ACTIONS_FIX.md for no-permission deployment options"
+          echo ""
+          echo "💡 University accounts often lack permissions to create service principals."
+          echo "   Manual deployment with 'az login' is the recommended approach."
+
   # ==================== DEPLOY TO AZURE CONTAINER APPS ====================
   deploy-to-azure:
     runs-on: ubuntu-latest
@@ -130,30 +160,33 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check Azure Credentials
+        id: check-creds
+        run: |
+          if [ -z "${{ secrets.AZURE_CREDENTIALS }}" ]; then
+            echo "configured=false" >> $GITHUB_OUTPUT
+            echo "⚠️  AZURE_CREDENTIALS not configured - skipping deployment"
+          else
+            echo "configured=true" >> $GITHUB_OUTPUT
+            echo "✅ AZURE_CREDENTIALS configured - proceeding with deployment"
+          fi
+
       - name: Azure Login
+        if: steps.check-creds.outputs.configured == 'true'
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-        continue-on-error: true
         id: azure-login
 
-      - name: Check Azure Login Status
+      - name: Verify Azure Authentication
+        if: steps.check-creds.outputs.configured == 'true'
         run: |
-          if [ "${{ steps.azure-login.outcome }}" = "failure" ]; then
-            echo "⚠️  Azure Login Failed - This is expected if using university email"
-            echo "📝 Manual deployment may be required. See AZURE_DEPLOYMENT_GUIDE.md"
-            echo "💡 Deployment will continue if AZURE_CREDENTIALS secret is properly configured"
-          else
-            echo "✅ Azure Login Successful"
-          fi
-
-      - name: Verify Azure Setup
-        run: |
-          echo "🔍 Checking Azure CLI..."
-          az --version
-          az account show || echo "⚠️  Not authenticated to Azure"
+          echo "🔍 Verifying Azure authentication..."
+          az account show
+          echo "✅ Successfully authenticated to Azure"
 
       - name: Deploy Services to Azure Container Apps
+        if: steps.check-creds.outputs.configured == 'true'
         run: |
           RG="${{ env.AZURE_RESOURCE_GROUP }}"
           ENV_NAME="ctse-env"
@@ -318,6 +351,7 @@ jobs:
           echo "GATEWAY_URL=$GATEWAY_URL" >> $GITHUB_ENV
 
       - name: Post Deployment Summary
+        if: steps.check-creds.outputs.configured == 'true'
         run: |
           echo "## 🚀 Deployment Information" >> $GITHUB_STEP_SUMMARY
           echo "**Repository**: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY

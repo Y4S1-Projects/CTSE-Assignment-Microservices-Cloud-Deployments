@@ -4,7 +4,11 @@
 **Academic Year:** Year 4 Semester 2  
 **Institution:** SLIIT (Sri Lanka Institute of Information Technology)
 
-> **📌 NEW: [Azure Deployment Guide for University Accounts](AZURE_DEPLOYMENT_GUIDE.md)** - Comprehensive guide for deploying with university email restrictions
+> **🚨 IMPORTANT FOR UNIVERSITY ACCOUNTS:**
+>
+> - **📌 No Service Principal Permissions?** → [NO PERMISSION DEPLOYMENT GUIDE](NO_PERMISSION_DEPLOY.md) ⭐ **START HERE**
+> - **GitHub Actions failing?** → [GitHub Actions Fix](GITHUB_ACTIONS_FIX.md) ⚡
+> - **Need deployment help?** → [Azure Deployment Guide](AZURE_DEPLOYMENT_GUIDE.md) 📘
 
 ---
 
@@ -306,6 +310,27 @@ mvn clean install -DskipTests
 ---
 
 ## ☁️ Deployment
+
+### Azure Deployment (Recommended for University Accounts)
+
+#### ⚡ Quick Deploy (No Service Principal Required)
+
+**Perfect for university Azure accounts without special permissions!**
+
+```powershell
+# 1. Push code to GitHub (builds Docker images automatically)
+git push origin main
+
+# 2. Login to Azure
+az login
+
+# 3. Deploy using pre-built images from GitHub
+.\deploy-from-github.ps1
+```
+
+**Done!** Your API is live on Azure. See [GITHUB_ACTIONS_FIX.md](GITHUB_ACTIONS_FIX.md) for details.
+
+---
 
 ### Prerequisites
 
