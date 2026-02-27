@@ -33,8 +33,11 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/auth/login",
             "/auth/validate",
             "/auth/health",
-            "/actuator/health",
-            "/actuator/info",
+            "/actuator/",        // All actuator endpoints
+            "/auth/actuator/",   // Auth service actuator endpoints via gateway
+            "/catalog/actuator/",// Catalog service actuator endpoints via gateway
+            "/orders/actuator/", // Order service actuator endpoints via gateway
+            "/payments/actuator/", // Payment service actuator endpoints via gateway
             "/swagger-ui",
             "/v3/api-docs",
             "/webjars"
