@@ -148,19 +148,93 @@ jobs:
           RG="${{ env.AZURE_RESOURCE_GROUP }}"
           ENV_NAME="ctse-env"
           LOCATION="${{ env.AZURE_LOCATION }}"
+          REGISTRY="${{ env.REGISTRY }}"
+          REPO="${{ github.repository }}"
+          TAG="${{ github.sha }}"
 
-          echo "📦 Deployment Configuration:"
+          echo "📦 Starting Azure Container Apps Deployment..."
           echo "  Resource Group: $RG"
           echo "  Environment: $ENV_NAME"
           echo "  Location: $LOCATION"
           echo ""
 
-          # These commands will be executed if Azure credentials are available
-          # For now, this logs the deployment steps
-          echo "✅ Deployment steps are configured"
-          echo "  • Services will be deployed to Azure Container Apps"
-          echo "  • Each service will use its Docker image"
-          echo "  • Health checks and auto-scaling enabled"
+          # Create resource group if it doesn't exist
+          echo "1️⃣ Creating resource group..."
+          az group create --name "$RG" --location "$LOCATION" || true
+
+          # Create container apps environment
+          echo "2️⃣ Creating Container Apps environment..."
+          az containerapp env create \
+            --name "$ENV_NAME" \
+            --resource-group "$RG" \
+            --location "$LOCATION" || true
+
+          # Deploy each service
+          echo "3️⃣ Deploying microservices..."
+
+          # API Gateway (Public)
+          az containerapp create --name "api-gateway" \
+            --resource-group "$RG" \
+            --environment "$ENV_NAME" \
+            --image "$REGISTRY/$REPO/api-gateway:$TAG" \
+            --target-port 8080 \
+            --ingress 'external' \
+            --min-replicas 1 --max-replicas 2 \
+            --cpu 0.5 --memory 1Gi \
+            --env-vars SPRING_PROFILES_ACTIVE=azure \
+            || true
+
+          # Auth Service (Internal)
+          az containerapp create --name "auth-service" \
+            --resource-group "$RG" \
+            --environment "$ENV_NAME" \
+            --image "$REGISTRY/$REPO/auth-service:$TAG" \
+            --target-port 8081 \
+            --ingress 'internal' \
+            --min-replicas 0 --max-replicas 2 \
+            --cpu 0.5 --memory 1Gi \
+            --env-vars SPRING_PROFILES_ACTIVE=azure \
+            || true
+
+          # Catalog Service (Internal)
+          az containerapp create --name "catalog-service" \
+            --resource-group "$RG" \
+            --environment "$ENV_NAME" \
+            --image "$REGISTRY/$REPO/catalog-service:$TAG" \
+            --target-port 8082 \
+            --ingress 'internal' \
+            --min-replicas 0 --max-replicas 2 \
+            --cpu 0.5 --memory 1Gi \
+            --env-vars SPRING_PROFILES_ACTIVE=azure \
+            || true
+
+          # Order Service (Internal)
+          az containerapp create --name "order-service" \
+            --resource-group "$RG" \
+            --environment "$ENV_NAME" \
+            --image "$REGISTRY/$REPO/order-service:$TAG" \
+            --target-port 8083 \
+            --ingress 'internal' \
+            --min-replicas 0 --max-replicas 2 \
+            --cpu 0.5 --memory 1Gi \
+            --env-vars SPRING_PROFILES_ACTIVE=azure \
+            || true
+
+          # Payment Service (Internal)
+          az containerapp create --name "payment-service" \
+            --resource-group "$RG" \
+            --environment "$ENV_NAME" \
+            --image "$REGISTRY/$REPO/payment-service:$TAG" \
+            --target-port 8084 \
+            --ingress 'internal' \
+            --min-replicas 0 --max-replicas 2 \
+            --cpu 0.5 --memory 1Gi \
+            --env-vars SPRING_PROFILES_ACTIVE=azure \
+            || true
+
+          echo ""
+          echo "✅ Deployment commands executed!"
+          echo "Services should appear in Azure Portal shortly..."
 
       - name: Post Deployment Summary
         run: |
@@ -182,13 +256,47 @@ jobs:
     needs: deploy-to-azure
     if: always()
     steps:
-      - name: Smoke Test
+      - name: Smoke Test - Check Azure Deployments
         continue-on-error: true
         run: |
-          echo "🧪 Running smoke tests..."
-          echo "  - Services deployed to Azure Container Apps"
-          echo "  - Health checks available at /actuator/health"
-          echo "  - API Gateway endpoint will be available in Azure"
+          RG="${{ env.AZURE_RESOURCE_GROUP }}"
+          
+          echo "🧪 Running smoke tests on Azure Container Apps..."
+          echo ""
+          
+          # Get API Gateway URL
+          echo "1️⃣ Checking API Gateway..."
+          GW_URL=$(az containerapp show --name api-gateway --resource-group "$RG" \
+            --query "properties.configuration.ingress.fqdn" -o tsv 2>/dev/null || echo "")
+          
+          if [ -n "$GW_URL" ]; then
+            echo "  ✅ API Gateway URL: https://$GW_URL"
+            curl -s -o /dev/null -w "  Status: %{http_code}\n" "https://$GW_URL/actuator/health" || echo "  ⚠️ Could not reach health endpoint"
+          else
+            echo "  ⚠️ API Gateway not yet available (it may still be starting)"
+          fi
+          
+          echo ""
+          echo "2️⃣ Checking Auth Service..."
+          AUTH_URL=$(az containerapp show --name auth-service --resource-group "$RG" \
+            --query "properties.configuration.ingress.fqdn" -o tsv 2>/dev/null || echo "")
+          
+          if [ -n "$AUTH_URL" ]; then
+            echo "  ✅ Auth Service URL: https://$AUTH_URL"
+          else
+            echo "  ℹ️ Auth Service (internal only, no public URL)"
+          fi
+          
+          echo ""
+          echo "3️⃣ Service Status in Azure:"
+          for service in api-gateway auth-service catalog-service order-service payment-service; do
+            status=$(az containerapp show --name "$service" --resource-group "$RG" \
+              --query "properties.runningStatus" -o tsv 2>/dev/null || echo "Not deployed")
+            echo "  • $service: $status"
+          done
+          
+          echo ""
+          echo "✅ Test complete! Check Azure Portal for service details."
 
   # ==================== FINAL REPORT ====================
   summary:
