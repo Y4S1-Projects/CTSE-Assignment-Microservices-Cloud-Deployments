@@ -305,18 +305,113 @@ mvn clean install -DskipTests
 
 ## ☁️ Deployment
 
+### Prerequisites
+
+- **Docker** (version 20.10+)
+- **Docker Compose** (version 1.29+)
+- **Java 17+** (for local development)
+- **Maven 3.9+** (for building)
+- **Azure CLI** (for Azure deployment)
+
 ### Local Deployment (Docker Compose)
 
+#### 1. Build All Services Locally
+
 ```bash
-# Start all services
+# Build all services
+docker-compose build
+
+# Build specific service
+docker build -t api-gateway:latest ./api-gateway
+docker build -t auth-service:latest ./auth-service
+docker build -t catalog-service:latest ./catalog-service
+docker build -t order-service:latest ./order-service
+docker build -t payment-service:latest ./payment-service
+```
+
+#### 2. Run All Services
+
+```bash
+# Start all services in background
 docker-compose up -d
+
+# Start with logs visible
+docker-compose up
 
 # View logs
 docker-compose logs -f
 
-# Stop services
-docker-compose down
+# View specific service logs
+docker-compose logs -f api-gateway
+docker-compose logs -f auth-service
 ```
+
+#### 3. Verify Services Running
+
+```bash
+# Check all containers
+docker-compose ps
+
+# Check API Gateway health
+curl http://localhost:8080/actuator/health
+
+# Check Auth Service health
+curl http://localhost:8081/actuator/health
+```
+
+#### 4. Stop Services
+
+```bash
+# Stop all services
+docker-compose down
+
+# Remove volumes as well
+docker-compose down -v
+
+# Remove images
+docker-compose down --rmi all
+```
+
+### Docker Optimization
+
+✅ **Optimizations Applied:**
+
+- **Multi-stage builds:** Maven builder (3.9.6) → Alpine runtime (17-jdk-alpine)
+- **.dockerignore files:** Exclude unnecessary files (target, .git, .idea, node_modules, \*.log, docs, etc.)
+- **Layer caching:** Dependency and source separation for better cache hits
+- **Optimized base images:** Alpine Linux for minimal image size (~370MB per service)
+- **Health checks:** All services configured with Spring Boot Actuator endpoints
+
+### Manual Docker Build & Run
+
+```bash
+# Build individual service
+cd api-gateway
+docker build -t api-gateway:latest .
+
+# Run service
+docker run -d \
+  --name api-gateway \
+  -p 8080:8080 \
+  -e JWT_SECRET=your-secret-key \
+  api-gateway:latest
+
+# Stop and remove
+docker stop api-gateway
+docker rm api-gateway
+```
+
+### Environment Variables for Docker
+
+Set these in `docker-compose.yml` or at runtime:
+
+| Variable            | Default                     | Description         |
+| ------------------- | --------------------------- | ------------------- |
+| JWT_SECRET          | secret-key-123              | JWT signing secret  |
+| SERVICE_AUTH_URL    | http://auth-service:8081    | Auth Service URL    |
+| SERVICE_CATALOG_URL | http://catalog-service:8082 | Catalog Service URL |
+| SERVICE_ORDER_URL   | http://order-service:8083   | Order Service URL   |
+| SERVICE_PAYMENT_URL | http://payment-service:8084 | Payment Service URL |
 
 ### Azure Container Apps Deployment
 
@@ -374,7 +469,11 @@ docker-compose down
    ```
 
 6. **Deploy Services**
+
+   Deploy all 5 services to Azure Container Apps:
+
    ```bash
+   # deploy API Gateway
    az containerapp create \
      --name api-gateway \
      --resource-group ctse-microservices-rg \
@@ -382,21 +481,149 @@ docker-compose down
      --image ctseregistry.azurecr.io/api-gateway:latest \
      --target-port 8080 \
      --ingress external \
+     --registry-server ctseregistry.azurecr.io \
+     --environment-variables JWT_SECRET=your-secret-key SERVICE_AUTH_URL=http://auth-service:8081 SERVICE_CATALOG_URL=http://catalog-service:8082 SERVICE_ORDER_URL=http://order-service:8083 SERVICE_PAYMENT_URL=http://payment-service:8084
+
+   # Deploy Auth Service
+   az containerapp create \
+     --name auth-service \
+     --resource-group ctse-microservices-rg \
+     --environment ctse-env \
+     --image ctseregistry.azurecr.io/auth-service:latest \
+     --target-port 8081 \
+     --ingress internal \
+     --registry-server ctseregistry.azurecr.io \
+     --environment-variables JWT_SECRET=your-secret-key
+
+   # Deploy Catalog Service
+   az containerapp create \
+     --name catalog-service \
+     --resource-group ctse-microservices-rg \
+     --environment ctse-env \
+     --image ctseregistry.azurecr.io/catalog-service:latest \
+     --target-port 8082 \
+     --ingress internal \
+     --registry-server ctseregistry.azurecr.io
+
+   # Deploy Order Service
+   az containerapp create \
+     --name order-service \
+     --resource-group ctse-microservices-rg \
+     --environment ctse-env \
+     --image ctseregistry.azurecr.io/order-service:latest \
+     --target-port 8083 \
+     --ingress internal \
+     --registry-server ctseregistry.azurecr.io
+
+   # Deploy Payment Service
+   az containerapp create \
+     --name payment-service \
+     --resource-group ctse-microservices-rg \
+     --environment ctse-env \
+     --image ctseregistry.azurecr.io/payment-service:latest \
+     --target-port 8084 \
+     --ingress internal \
      --registry-server ctseregistry.azurecr.io
    ```
 
+7. **Configure Ingress & Load Balancing**
+
+   ```bash
+   # Update API Gateway for external access
+   az containerapp ingress update \
+     --name api-gateway \
+     --resource-group ctse-microservices-rg \
+     --type external \
+     --target-port 8080
+
+   # Enable auto-scaling
+   az containerapp update \
+     --name api-gateway \
+     --resource-group ctse-microservices-rg \
+     --min-replicas 1 \
+     --max-replicas 3
+   ```
+
+8. **Verify Deployment**
+
+   ```bash
+   # List all container apps
+   az containerapp list \
+     --resource-group ctse-microservices-rg \
+     --output table
+
+   # Check pod logs
+   az containerapp logs show \
+     --name api-gateway \
+     --resource-group ctse-microservices-rg
+
+   # Get container app URL
+   az containerapp show \
+     --name api-gateway \
+     --resource-group ctse-microservices-rg \
+     --query "properties.configuration.ingress.fqdn"
+   ```
+
+### Docker Compose File Reference
+
+The complete `docker-compose.yml` includes:
+
+- **5 services:** api-gateway, auth-service, catalog-service, order-service, payment-service
+- **Multi-stage builds:** Maven builder + Alpine runtime for optimized images
+- **Service networking:** microservices-network bridge for inter-service communication
+- **Environment variables:** JWT_SECRET and service URLs
+- **Health checks:** All services have health check endpoints configured
+- **Port mappings:** 8080-8084 properly mapped
+- **Dependencies:** Services started in correct order
+- **Restart policies:** Automatic restart on failure
+
 ### CI/CD Pipeline
 
-GitHub Actions workflow automatically:
+**GitHub Actions Implementation:**
 
-1. Builds all services
-2. Runs tests
-3. Performs security scanning
-4. Builds Docker images
-5. Pushes to container registry
-6. Deploys to Azure Container Apps
+The project includes automated CI/CD pipeline configured in `.github/workflows/deploy.yml`:
 
-Workflow file: `.github/workflows/deploy.yml`
+```yaml
+# Automated workflow triggers on:
+# - Push to main branch
+# - Pull requests to main branch
+
+Steps:
+1. Checkout code
+2. Setup Java 17
+3. Run unit tests
+4. Verify build (Maven)
+5. Build Docker images for all 5 services
+6. Push images to Azure Container Registry
+7. Deploy to Azure Container Apps
+8. Run smoke tests on deployed services
+9. Send deployment notifications
+```
+
+**Pipeline Features:**
+
+- ✅ **Automated builds** on every push to main
+- ✅ **Test execution** for all services
+- ✅ **Code quality checks** with Maven plugins
+- ✅ **Security scanning** of dependencies
+- ✅ **Docker image building** with multi-stage optimization
+- ✅ **Registry push** to Azure Container Registry
+- ✅ **Automatic deployment** to Azure Container Apps
+- ✅ **Health checks** before marking deployment complete
+- ✅ **Slack notifications** of build status
+
+**Accessing Build Logs:**
+
+```bash
+# View Actions in GitHub
+# https://github.com/your-org/CTSE-Assignment-Microservices/actions
+
+# View deployment logs in Azure
+az containerapp logs show \
+  --name api-gateway \
+  --resource-group ctse-microservices-rg \
+  --follow
+```
 
 ---
 

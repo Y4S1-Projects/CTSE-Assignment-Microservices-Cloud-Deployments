@@ -1,0 +1,48 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+*.iml
+
+# Build files
+target
+*.jar
+*.war
+*.ear
+
+# Node modules
+node_modules
+npm-debug.log
+
+# Maven
+.m2
+
+# Documentation
+*.md
+docs
+.github
+
+# Test files
+src/test
+*.test.js
+
+# OS files
+.env.local
+.env.*.local
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Temporary files
+*.tmp
+*.log
