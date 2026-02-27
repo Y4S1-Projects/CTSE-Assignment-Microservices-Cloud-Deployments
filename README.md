@@ -4,6 +4,8 @@
 **Academic Year:** Year 4 Semester 2  
 **Institution:** SLIIT (Sri Lanka Institute of Information Technology)
 
+> **📌 NEW: [Azure Deployment Guide for University Accounts](AZURE_DEPLOYMENT_GUIDE.md)** - Comprehensive guide for deploying with university email restrictions
+
 ---
 
 ## 📋 Table of Contents

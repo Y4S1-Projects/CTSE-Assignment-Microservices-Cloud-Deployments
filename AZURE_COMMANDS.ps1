@@ -71,10 +71,10 @@ az containerapp create `
   --ingress external `
   --environment-variables `
     JWT_SECRET=$JWT_SECRET `
-    SERVICE_AUTH_URL="http://auth-service" `
-    SERVICE_CATALOG_URL="http://catalog-service" `
-    SERVICE_ORDER_URL="http://order-service" `
-    SERVICE_PAYMENT_URL="http://payment-service" `
+    AUTH_SERVICE_URL="http://auth-service" `
+    CATALOG_SERVICE_URL="http://catalog-service" `
+    ORDER_SERVICE_URL="http://order-service" `
+    PAYMENT_SERVICE_URL="http://payment-service" `
   --cpu 0.5 --memory 1Gi
 
 ## STEP 11: Get the API Gateway URL (run this to get your endpoint)

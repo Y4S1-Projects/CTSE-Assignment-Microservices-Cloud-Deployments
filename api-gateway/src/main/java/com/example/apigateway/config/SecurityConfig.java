@@ -15,14 +15,16 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf.disable())
                 .authorizeExchange(exchanges -> exchanges
+                        // Allow public access to root and health endpoints
+                        .pathMatchers("/", "/health").permitAll()
                         // Allow public access to actuator endpoints
                         .pathMatchers("/actuator/**").permitAll()
                         // Allow public access to Swagger UI and OpenAPI docs
                         .pathMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**").permitAll()
                         // Allow public access to all gateway routes (for testing)
                         .pathMatchers("/auth/**", "/catalog/**", "/orders/**", "/payments/**", "/notifications/**").permitAll()
-                        // All other requests require authentication
-                        .anyExchange().authenticated()
+                        // Allow all other requests (for development/testing)
+                        .anyExchange().permitAll()
                 )
                 .build();
     }

@@ -1,31 +1,20 @@
 package com.example.authservice.config;
 
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
-import io.swagger.v3.oas.models.servers.Server;
-import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
-import io.swagger.v3.oas.models.Components;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
-import java.util.List;
 
 @Configuration
 public class OpenApiConfig {
 
-    @Value("${server.port:8081}")
-    private String serverPort;
-
     @Bean
     public OpenAPI authServiceOpenAPI() {
-        Server localServer = new Server()
-                .url("http://localhost:" + serverPort)
-                .description("Local development server");
-
         Contact contact = new Contact()
                 .name("CTSE Team")
                 .email("ctse@sliit.lk");
@@ -44,13 +33,13 @@ public class OpenApiConfig {
                 .in(SecurityScheme.In.HEADER)
                 .name("Authorization");
 
-        SecurityRequirement securityRequirement = new SecurityRequirement()
-                .addList("bearerAuth");
+        // Don't add global security requirement - let individual endpoints decide
+        // SecurityRequirement securityRequirement = new SecurityRequirement()
+        //         .addList("bearerAuth");
 
         return new OpenAPI()
                 .info(info)
-                .servers(List.of(localServer))
-                .components(new Components().addSecuritySchemes("bearerAuth", securityScheme))
-                .addSecurityItem(securityRequirement);
+                .components(new Components().addSecuritySchemes("bearerAuth", securityScheme));
+                // .addSecurityItem(securityRequirement); // Removed global security
     }
 }

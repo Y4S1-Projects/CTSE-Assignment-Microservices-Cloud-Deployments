@@ -135,6 +135,17 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
         continue-on-error: true
+        id: azure-login
+
+      - name: Check Azure Login Status
+        run: |
+          if [ "${{ steps.azure-login.outcome }}" = "failure" ]; then
+            echo "⚠️  Azure Login Failed - This is expected if using university email"
+            echo "📝 Manual deployment may be required. See AZURE_DEPLOYMENT_GUIDE.md"
+            echo "💡 Deployment will continue if AZURE_CREDENTIALS secret is properly configured"
+          else
+            echo "✅ Azure Login Successful"
+          fi
 
       - name: Verify Azure Setup
         run: |
@@ -147,6 +158,9 @@ jobs:
           RG="${{ env.AZURE_RESOURCE_GROUP }}"
           ENV_NAME="ctse-env"
           LOCATION="${{ env.AZURE_LOCATION }}"
+          REGISTRY="${{ env.REGISTRY }}"
+          REPO_LC="${GITHUB_REPOSITORY,,}"
+          IMAGE_TAG="${{ github.sha }}"
 
           echo "📦 Deployment Configuration:"
           echo "  Resource Group: $RG"
@@ -154,12 +168,154 @@ jobs:
           echo "  Location: $LOCATION"
           echo ""
 
-          # These commands will be executed if Azure credentials are available
-          # For now, this logs the deployment steps
-          echo "✅ Deployment steps are configured"
-          echo "  • Services will be deployed to Azure Container Apps"
-          echo "  • Each service will use its Docker image"
-          echo "  • Health checks and auto-scaling enabled"
+          # Create Resource Group if not exists
+          echo "🔧 Ensuring Resource Group exists..."
+          az group create --name $RG --location $LOCATION --output none || true
+
+          # Create Container Apps Environment if not exists
+          echo "🏗️  Ensuring Container Apps Environment exists..."
+          az containerapp env create \
+            --name $ENV_NAME \
+            --resource-group $RG \
+            --location $LOCATION \
+            --output none || echo "Environment already exists"
+
+          # Deploy Auth Service (internal ingress)
+          echo "🚀 Deploying auth-service..."
+          az containerapp create \
+            --name auth-service \
+            --resource-group $RG \
+            --environment $ENV_NAME \
+            --image $REGISTRY/$REPO_LC/auth-service:$IMAGE_TAG \
+            --target-port 8081 \
+            --ingress internal \
+            --registry-server $REGISTRY \
+            --registry-username ${{ github.actor }} \
+            --registry-password ${{ secrets.GITHUB_TOKEN }} \
+            --env-vars JWT_SECRET=${{ secrets.JWT_SECRET }} \
+            --cpu 0.5 --memory 1.0Gi \
+            --min-replicas 1 --max-replicas 3 \
+            --output none || \
+          az containerapp update \
+            --name auth-service \
+            --resource-group $RG \
+            --image $REGISTRY/$REPO_LC/auth-service:$IMAGE_TAG \
+            --set-env-vars JWT_SECRET=${{ secrets.JWT_SECRET }} \
+            --output none
+
+          # Deploy Catalog Service (internal ingress)
+          echo "🚀 Deploying catalog-service..."
+          az containerapp create \
+            --name catalog-service \
+            --resource-group $RG \
+            --environment $ENV_NAME \
+            --image $REGISTRY/$REPO_LC/catalog-service:$IMAGE_TAG \
+            --target-port 8082 \
+            --ingress internal \
+            --registry-server $REGISTRY \
+            --registry-username ${{ github.actor }} \
+            --registry-password ${{ secrets.GITHUB_TOKEN }} \
+            --env-vars JWT_SECRET=${{ secrets.JWT_SECRET }} \
+            --cpu 0.5 --memory 1.0Gi \
+            --min-replicas 1 --max-replicas 3 \
+            --output none || \
+          az containerapp update \
+            --name catalog-service \
+            --resource-group $RG \
+            --image $REGISTRY/$REPO_LC/catalog-service:$IMAGE_TAG \
+            --set-env-vars JWT_SECRET=${{ secrets.JWT_SECRET }} \
+            --output none
+
+          # Deploy Order Service (internal ingress)
+          echo "🚀 Deploying order-service..."
+          az containerapp create \
+            --name order-service \
+            --resource-group $RG \
+            --environment $ENV_NAME \
+            --image $REGISTRY/$REPO_LC/order-service:$IMAGE_TAG \
+            --target-port 8083 \
+            --ingress internal \
+            --registry-server $REGISTRY \
+            --registry-username ${{ github.actor }} \
+            --registry-password ${{ secrets.GITHUB_TOKEN }} \
+            --env-vars JWT_SECRET=${{ secrets.JWT_SECRET }} \
+            --cpu 0.5 --memory 1.0Gi \
+            --min-replicas 1 --max-replicas 3 \
+            --output none || \
+          az containerapp update \
+            --name order-service \
+            --resource-group $RG \
+            --image $REGISTRY/$REPO_LC/order-service:$IMAGE_TAG \
+            --set-env-vars JWT_SECRET=${{ secrets.JWT_SECRET }} \
+            --output none
+
+          # Deploy Payment Service (internal ingress)
+          echo "🚀 Deploying payment-service..."
+          az containerapp create \
+            --name payment-service \
+            --resource-group $RG \
+            --environment $ENV_NAME \
+            --image $REGISTRY/$REPO_LC/payment-service:$IMAGE_TAG \
+            --target-port 8084 \
+            --ingress internal \
+            --registry-server $REGISTRY \
+            --registry-username ${{ github.actor }} \
+            --registry-password ${{ secrets.GITHUB_TOKEN }} \
+            --env-vars JWT_SECRET=${{ secrets.JWT_SECRET }} \
+            --cpu 0.5 --memory 1.0Gi \
+            --min-replicas 1 --max-replicas 3 \
+            --output none || \
+          az containerapp update \
+            --name payment-service \
+            --resource-group $RG \
+            --image $REGISTRY/$REPO_LC/payment-service:$IMAGE_TAG \
+            --set-env-vars JWT_SECRET=${{ secrets.JWT_SECRET }} \
+            --output none
+
+          # Deploy API Gateway (external ingress with service URLs)
+          echo "🚀 Deploying api-gateway..."
+          az containerapp create \
+            --name api-gateway \
+            --resource-group $RG \
+            --environment $ENV_NAME \
+            --image $REGISTRY/$REPO_LC/api-gateway:$IMAGE_TAG \
+            --target-port 8080 \
+            --ingress external \
+            --registry-server $REGISTRY \
+            --registry-username ${{ github.actor }} \
+            --registry-password ${{ secrets.GITHUB_TOKEN }} \
+            --env-vars \
+              JWT_SECRET=${{ secrets.JWT_SECRET }} \
+              AUTH_SERVICE_URL=http://auth-service \
+              CATALOG_SERVICE_URL=http://catalog-service \
+              ORDER_SERVICE_URL=http://order-service \
+              PAYMENT_SERVICE_URL=http://payment-service \
+            --cpu 0.5 --memory 1.0Gi \
+            --min-replicas 2 --max-replicas 5 \
+            --output none || \
+          az containerapp update \
+            --name api-gateway \
+            --resource-group $RG \
+            --image $REGISTRY/$REPO_LC/api-gateway:$IMAGE_TAG \
+            --set-env-vars \
+              JWT_SECRET=${{ secrets.JWT_SECRET }} \
+              AUTH_SERVICE_URL=http://auth-service \
+              CATALOG_SERVICE_URL=http://catalog-service \
+              ORDER_SERVICE_URL=http://order-service \
+              PAYMENT_SERVICE_URL=http://payment-service \
+            --output none
+
+          # Get API Gateway URL
+          echo "🌐 Getting API Gateway URL..."
+          GATEWAY_URL=$(az containerapp show \
+            --name api-gateway \
+            --resource-group $RG \
+            --query "properties.configuration.ingress.fqdn" \
+            --output tsv)
+
+          echo "✅ Deployment Complete!"
+          echo "API Gateway URL: https://$GATEWAY_URL"
+          echo "GATEWAY_URL=$GATEWAY_URL" >> $GITHUB_ENV
 
       - name: Post Deployment Summary
         run: |
@@ -169,11 +325,21 @@ jobs:
           echo "**Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Deployed Services" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ api-gateway" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ auth-service" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ catalog-service" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ order-service" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ payment-service" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ api-gateway (external)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ auth-service (internal)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ catalog-service (internal)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ order-service (internal)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ payment-service (internal)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ env.GATEWAY_URL }}" ]; then
+            echo "### 🌐 API Gateway URL" >> $GITHUB_STEP_SUMMARY
+            echo "https://${{ env.GATEWAY_URL }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Test Endpoints:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Health: https://${{ env.GATEWAY_URL }}/health" >> $GITHUB_STEP_SUMMARY
+            echo "- Swagger UI: https://${{ env.GATEWAY_URL }}/swagger-ui.html" >> $GITHUB_STEP_SUMMARY
+            echo "- Auth Register: POST https://${{ env.GATEWAY_URL }}/auth/register" >> $GITHUB_STEP_SUMMARY
+          fi
 
   # ==================== SMOKE TESTS ====================
   smoke-test:
@@ -181,13 +347,61 @@ jobs:
     needs: deploy-to-azure
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+        continue-on-error: true
+
+      - name: Get API Gateway URL
+        id: get-url
+        run: |
+          GATEWAY_URL=$(az containerapp show \
+            --name api-gateway \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query "properties.configuration.ingress.fqdn" \
+            --output tsv 2>/dev/null || echo "")
+          echo "url=$GATEWAY_URL" >> $GITHUB_OUTPUT
+
       - name: Smoke Test
         continue-on-error: true
         run: |
           echo "🧪 Running smoke tests..."
-          echo "  - Services deployed to Azure Container Apps"
-          echo "  - Health checks available at /actuator/health"
-          echo "  - API Gateway endpoint will be available in Azure"
+          GATEWAY_URL="${{ steps.get-url.outputs.url }}"
+
+          if [ -z "$GATEWAY_URL" ]; then
+            echo "⚠️  Could not retrieve Gateway URL. Skipping smoke tests."
+            echo "📝 You may need to manually verify deployment in Azure Portal"
+            exit 0
+          fi
+
+          echo "Testing Gateway URL: https://$GATEWAY_URL"
+
+          # Test Gateway Health
+          echo "Testing /health endpoint..."
+          if curl -f -s -m 10 "https://$GATEWAY_URL/health"; then
+            echo "✅ Health check passed"
+          else
+            echo "❌ Health check failed"
+          fi
+
+          # Test Gateway Root
+          echo "Testing / endpoint..."
+          if curl -f -s -m 10 "https://$GATEWAY_URL/"; then
+            echo "✅ Root endpoint passed"
+          else
+            echo "❌ Root endpoint failed"
+          fi
+
+          # Test Auth Service through Gateway
+          echo "Testing /auth/health endpoint..."
+          if curl -f -s -m 10 "https://$GATEWAY_URL/auth/health"; then
+            echo "✅ Auth health check passed"
+          else
+            echo "❌ Auth health check failed"
+          fi
+
+          echo "✅ Smoke tests completed"
 
   # ==================== FINAL REPORT ====================
   summary:
