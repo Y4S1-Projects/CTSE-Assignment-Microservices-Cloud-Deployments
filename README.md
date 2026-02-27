@@ -329,7 +329,6 @@ az login
 
 - Single source of truth: [AZURE_DEPLOYMENT_GUIDE.md](AZURE_DEPLOYMENT_GUIDE.md)
 - Main script: `deploy-from-github.ps1`
-- Alternative script (local Docker/ACR flow): `deploy-azure.ps1`
 
 ### Verify Deployment
 

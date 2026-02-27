@@ -33,8 +33,7 @@ For university accounts, the normal path is:
 
 ## Scripts
 
-- `deploy-from-github.ps1` (preferred): deploys from `ghcr.io` images, no service principal required
-- `deploy-azure.ps1` (alternative): local Docker/ACR based deployment
+- `deploy-from-github.ps1`: deploys from `ghcr.io` images, no service principal required
 
 ## Required Tools
 
