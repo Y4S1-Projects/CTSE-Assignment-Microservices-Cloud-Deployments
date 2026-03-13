@@ -88,6 +88,10 @@ public class JwtTokenValidator {
             if (rolesObj instanceof List) {
                 return (List<String>) rolesObj;
             }
+            Object roleObj = claims.get("role");
+            if (roleObj instanceof String roleValue && !roleValue.isBlank()) {
+                return List.of(roleValue);
+            }
         } catch (Exception e) {
             logger.error("Error extracting roles from token: {}", e.getMessage());
         }

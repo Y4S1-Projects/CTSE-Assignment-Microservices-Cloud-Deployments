@@ -1,33 +1,46 @@
 package com.example.authservice.service;
 
+import com.example.authservice.dto.ChangePasswordRequest;
+import com.example.authservice.dto.ForgotPasswordRequest;
 import com.example.authservice.dto.LoginRequest;
 import com.example.authservice.dto.LoginResponse;
+import com.example.authservice.dto.RefreshRequest;
 import com.example.authservice.dto.RegisterRequest;
+import com.example.authservice.dto.ResetPasswordRequest;
+import com.example.authservice.entity.PasswordResetToken;
+import com.example.authservice.entity.RefreshToken;
+import com.example.authservice.entity.Role;
 import com.example.authservice.entity.User;
 import com.example.authservice.exception.InvalidCredentialsException;
 import com.example.authservice.exception.UserAlreadyExistsException;
+import com.example.authservice.repository.PasswordResetTokenRepository;
+import com.example.authservice.repository.RefreshTokenRepository;
 import com.example.authservice.repository.UserRepository;
 import com.example.authservice.util.JwtTokenProvider;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.util.Arrays;
+import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.UUID;
 
-/**
- * AuthServiceImpl - Full implementation for authentication operations
- */
 @Service
 @Transactional
 public class AuthServiceImpl implements AuthService {
-    private static final Logger logger = LoggerFactory.getLogger(AuthServiceImpl.class);
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
+
+    @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
@@ -35,47 +48,37 @@ public class AuthServiceImpl implements AuthService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private AuditService auditService;
+
+    @Value("${app.auth.refresh-expiry-days:7}")
+    private int refreshExpiryDays;
+
     @Override
     public LoginResponse login(LoginRequest request) {
-        logger.info("Login attempt for email: {}", request.getEmail());
-
-        // Find user by email
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
+                .orElseThrow(() -> {
+                    auditService.log(null, "LOGIN_FAILED", resolveRequestIp());
+                    return new InvalidCredentialsException("Invalid email or password");
+                });
 
-        // Verify password
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            logger.warn("Invalid password attempt for user: {}", request.getEmail());
+            auditService.log(user.getId(), "LOGIN_FAILED", resolveRequestIp());
             throw new InvalidCredentialsException("Invalid email or password");
         }
 
-        // Check if user is active
         if (!user.isActive()) {
-            logger.warn("Inactive user login attempt: {}", request.getEmail());
+            auditService.log(user.getId(), "ACCOUNT_LOCKED", resolveRequestIp());
             throw new InvalidCredentialsException("Account is inactive");
         }
 
-        // Generate JWT token
-        String token = jwtTokenProvider.generateToken(
-                user.getId(),
-                user.getUsername(),
-                Arrays.asList(user.getRole())
-        );
+        auditService.log(user.getId(), "LOGIN_SUCCESS", resolveRequestIp());
 
-        logger.info("Login successful for user: {}", user.getUsername());
-
-        return LoginResponse.builder()
-                .token(token)
-                .username(user.getUsername())
-                .userId(user.getId())
-                .build();
+        return issueTokens(user);
     }
 
     @Override
     public LoginResponse register(RegisterRequest request) {
-        logger.info("Registration attempt for email: {}", request.getEmail());
-
-        // Validate input
         if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
             throw new IllegalArgumentException("Email is required");
         }
@@ -86,50 +89,99 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalArgumentException("Username is required");
         }
 
-        // Check if user already exists
         Optional<User> existingUserByEmail = userRepository.findByEmail(request.getEmail());
         if (existingUserByEmail.isPresent()) {
-            logger.warn("Registration failed - email already exists: {}", request.getEmail());
             throw new UserAlreadyExistsException("User with this email already exists");
         }
 
         Optional<User> existingUserByUsername = userRepository.findByUsername(request.getUsername());
         if (existingUserByUsername.isPresent()) {
-            logger.warn("Registration failed - username already exists: {}", request.getUsername());
             throw new UserAlreadyExistsException("User with this username already exists");
         }
 
-        // Create new user
-        User newUser = User.builder()
+        User savedUser = userRepository.save(User.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .fullName(request.getFullName())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .role("USER")
-                .isActive(true)
+                .role(Role.CUSTOMER)
+                .active(true)
+                .build());
+
+        return issueTokens(savedUser);
+    }
+
+    @Override
+    public LoginResponse refresh(RefreshRequest request) {
+        RefreshToken refreshToken = refreshTokenRepository.findByTokenAndRevokedFalse(request.getRefreshToken())
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid refresh token"));
+
+        if (refreshToken.getExpiryDate().isBefore(LocalDateTime.now())) {
+            refreshToken.setRevoked(true);
+            refreshTokenRepository.save(refreshToken);
+            throw new InvalidCredentialsException("Refresh token expired");
+        }
+
+        return issueTokens(refreshToken.getUser());
+    }
+
+    @Override
+    public void logout(RefreshRequest request) {
+        refreshTokenRepository.findByTokenAndRevokedFalse(request.getRefreshToken()).ifPresent(token -> {
+            token.setRevoked(true);
+            refreshTokenRepository.save(token);
+        });
+    }
+
+    @Override
+    public void changePassword(String username, ChangePasswordRequest request) {
+        User user = getUserByUsername(username);
+
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
+            throw new InvalidCredentialsException("Old password is incorrect");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        auditService.log(user.getId(), "PASSWORD_CHANGED", resolveRequestIp());
+    }
+
+    @Override
+    public String forgotPassword(ForgotPasswordRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new InvalidCredentialsException("No user found for email"));
+
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .user(user)
+                .token(UUID.randomUUID().toString())
+                .expiryDate(LocalDateTime.now().plusMinutes(30))
+                .used(false)
                 .build();
 
-        // Save user to database
-        User savedUser = userRepository.save(newUser);
-        logger.info("User registered successfully: {}", savedUser.getUsername());
+        passwordResetTokenRepository.save(resetToken);
+        return resetToken.getToken();
+    }
 
-        // Generate JWT token
-        String token = jwtTokenProvider.generateToken(
-                savedUser.getId(),
-                savedUser.getUsername(),
-                Arrays.asList(savedUser.getRole())
-        );
+    @Override
+    public void resetPassword(ResetPasswordRequest request) {
+        PasswordResetToken token = passwordResetTokenRepository.findByTokenAndUsedFalse(request.getToken())
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid reset token"));
 
-        return LoginResponse.builder()
-                .token(token)
-                .username(savedUser.getUsername())
-                .userId(savedUser.getId())
-                .build();
+        if (token.getExpiryDate().isBefore(LocalDateTime.now())) {
+            throw new InvalidCredentialsException("Reset token expired");
+        }
+
+        User user = token.getUser();
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        auditService.log(user.getId(), "PASSWORD_CHANGED", resolveRequestIp());
+
+        token.setUsed(true);
+        passwordResetTokenRepository.save(token);
     }
 
     @Override
     public boolean validateToken(String token) {
-        logger.debug("Validating token");
         return jwtTokenProvider.validateToken(token);
     }
 
@@ -141,5 +193,47 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public String extractUsername(String token) {
         return jwtTokenProvider.extractUsername(token);
+    }
+
+    @Override
+    public String extractRole(String token) {
+        return jwtTokenProvider.extractRole(token);
+    }
+
+    @Override
+    public User getUserByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new InvalidCredentialsException("User not found"));
+    }
+
+    private LoginResponse issueTokens(User user) {
+        String accessToken = jwtTokenProvider.generateToken(user.getId(), user.getUsername(), user.getRole().name());
+
+        String refreshTokenValue = UUID.randomUUID().toString();
+        RefreshToken refreshToken = RefreshToken.builder()
+                .user(user)
+                .token(refreshTokenValue)
+                .expiryDate(LocalDateTime.now().plusDays(refreshExpiryDays))
+                .revoked(false)
+                .build();
+
+        refreshTokenRepository.save(refreshToken);
+
+        return LoginResponse.builder()
+                .token(accessToken)
+                .accessToken(accessToken)
+                .refreshToken(refreshTokenValue)
+                .username(user.getUsername())
+                .userId(user.getId())
+                .role(user.getRole())
+                .build();
+    }
+
+    private String resolveRequestIp() {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes != null && attributes.getRequest() != null) {
+            return attributes.getRequest().getRemoteAddr();
+        }
+        return "unknown";
     }
 }

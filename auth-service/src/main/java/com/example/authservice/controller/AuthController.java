@@ -17,8 +17,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.authservice.dto.LoginRequest;
 import com.example.authservice.dto.LoginResponse;
+import com.example.authservice.dto.RefreshRequest;
 import com.example.authservice.dto.RegisterRequest;
+import com.example.authservice.dto.ChangePasswordRequest;
+import com.example.authservice.dto.ForgotPasswordRequest;
+import com.example.authservice.dto.ResetPasswordRequest;
 import com.example.authservice.service.AuthService;
+import org.springframework.security.core.Authentication;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -73,6 +78,35 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponse> refresh(@RequestBody RefreshRequest request) {
+        return ResponseEntity.ok(authService.refresh(request));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, String>> logout(@RequestBody RefreshRequest request) {
+        authService.logout(request);
+        return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Map<String, String>> changePassword(Authentication authentication, @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(authentication.getName(), request);
+        return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        String token = authService.forgotPassword(request);
+        return ResponseEntity.ok(Map.of("resetToken", token));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(Map.of("message", "Password reset successfully"));
+    }
+
     @PostMapping("/validate")
     @Operation(
         summary = "Validate JWT token",
@@ -82,7 +116,7 @@ public class AuthController {
         @ApiResponse(responseCode = "200", description = "Token is valid"),
         @ApiResponse(responseCode = "401", description = "Token is invalid or expired")
     })
-    public ResponseEntity<Map<String, Object>> validateToken(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<Map<String, Object>> validateToken(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         logger.debug("Token validation request received");
         
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -98,6 +132,7 @@ public class AuthController {
             response.put("valid", true);
             response.put("userId", authService.extractUserId(token));
             response.put("username", authService.extractUsername(token));
+            response.put("role", authService.extractRole(token));
             return ResponseEntity.ok(response);
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

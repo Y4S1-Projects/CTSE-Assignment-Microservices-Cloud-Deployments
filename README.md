@@ -176,6 +176,23 @@ Content-Type: application/json
   "password": "password123"
 }
 
+# Login response (example)
+{
+  "accessToken": "<jwt-access-token>",
+  "refreshToken": "<refresh-token>",
+  "userId": "550e8400-e29b-41d4-a716-446655440000",
+  "username": "john.doe",
+  "role": "CUSTOMER"
+}
+
+# Refresh access token
+POST http://localhost:8081/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "<refresh-token>"
+}
+
 # Validate Token
 POST http://localhost:8081/auth/validate
 Authorization: Bearer <your-jwt-token>
@@ -406,7 +423,8 @@ curl -X POST http://localhost:8081/auth/validate \
 ### JWT Authentication
 
 - **Algorithm:** HMAC-SHA256
-- **Token Expiry:** 24 hours
+- **Access Token Expiry:** 15 minutes
+- **Refresh Token Expiry:** 7 days
 - **Password Hashing:** BCrypt (strength 10)
 
 ### Rate Limiting

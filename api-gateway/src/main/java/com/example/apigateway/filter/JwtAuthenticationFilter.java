@@ -32,6 +32,10 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/auth/register",
             "/auth/login",
             "/auth/validate",
+            "/auth/refresh",
+            "/auth/logout",
+            "/auth/forgot-password",
+            "/auth/reset-password",
             "/auth/health",
             "/actuator/",        // All actuator endpoints
             "/auth/actuator/",   // Auth service actuator endpoints via gateway
