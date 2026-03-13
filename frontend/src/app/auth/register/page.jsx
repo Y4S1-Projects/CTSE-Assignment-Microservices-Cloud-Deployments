@@ -10,12 +10,10 @@ import { registerUser } from "@/lib/authService";
 export default function RegisterPage() {
 	const router = useRouter();
 	const [form, setForm] = useState({
-		firstName: "",
-		lastName: "",
+		fullName: "",
 		username: "",
 		email: "",
 		password: "",
-		phoneNumber: "",
 	});
 	const [error, setError] = useState("");
 	const [success, setSuccess] = useState("");
@@ -41,19 +39,13 @@ export default function RegisterPage() {
 	return (
 		<div className='mx-auto w-full max-w-2xl'>
 			<Card className='space-y-5'>
-				<h1 className='text-2xl font-bold text-slate-900'>Create Your Account</h1>
-				<p className='text-sm text-slate-600'>Register as a customer account to access the platform.</p>
+				<h1 className='text-2xl font-bold text-slate-900'>Create Customer Account</h1>
+				<p className='text-sm text-slate-600'>Register to browse menu items and place food orders.</p>
 				<form onSubmit={handleSubmit} className='grid gap-4 sm:grid-cols-2'>
 					<Input
-						label='First Name'
-						value={form.firstName}
-						onChange={(event) => setForm((prev) => ({ ...prev, firstName: event.target.value }))}
-						required
-					/>
-					<Input
-						label='Last Name'
-						value={form.lastName}
-						onChange={(event) => setForm((prev) => ({ ...prev, lastName: event.target.value }))}
+						label='Full Name'
+						value={form.fullName}
+						onChange={(event) => setForm((prev) => ({ ...prev, fullName: event.target.value }))}
 						required
 					/>
 					<Input
@@ -70,18 +62,13 @@ export default function RegisterPage() {
 						required
 					/>
 					<Input
-						label='Phone Number'
-						value={form.phoneNumber}
-						onChange={(event) => setForm((prev) => ({ ...prev, phoneNumber: event.target.value }))}
-						required
-					/>
-					<Input
 						label='Password'
 						type='password'
 						value={form.password}
 						onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
 						required
 					/>
+					<div className='hidden sm:block' />
 					<div className='sm:col-span-2 space-y-2'>
 						{error ?
 							<p className='text-sm text-red-600'>{error}</p>

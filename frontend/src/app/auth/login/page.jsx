@@ -9,7 +9,7 @@ import { loginUser } from "@/lib/authService";
 
 export default function LoginPage() {
 	const router = useRouter();
-	const [form, setForm] = useState({ username: "", password: "" });
+	const [form, setForm] = useState({ email: "", password: "" });
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
 
@@ -32,13 +32,14 @@ export default function LoginPage() {
 	return (
 		<div className='mx-auto w-full max-w-md'>
 			<Card className='space-y-5'>
-				<h1 className='text-2xl font-bold text-slate-900'>Welcome Back</h1>
-				<p className='text-sm text-slate-600'>Sign in to continue to your dashboard.</p>
+				<h1 className='text-2xl font-bold text-slate-900'>Sign in to GreenBite</h1>
+				<p className='text-sm text-slate-600'>Continue to your food ordering dashboard.</p>
 				<form onSubmit={handleSubmit} className='space-y-4'>
 					<Input
-						label='Username'
-						value={form.username}
-						onChange={(event) => setForm((prev) => ({ ...prev, username: event.target.value }))}
+						label='Email'
+						type='email'
+						value={form.email}
+						onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
 						required
 					/>
 					<Input

@@ -18,7 +18,8 @@ export async function apiRequest(path, options = {}) {
 
 	let payload = null;
 	try {
-		payload = await response.json();
+		const text = await response.text();
+		payload = text ? JSON.parse(text) : null;
 	} catch {
 		payload = null;
 	}
@@ -28,5 +29,5 @@ export async function apiRequest(path, options = {}) {
 		throw new Error(message);
 	}
 
-	return payload;
+	return payload ?? {};
 }

@@ -2,16 +2,16 @@ import Card from "@/components/common/Card";
 
 const features = [
 	{
-		title: "Reusable Components",
-		description: "Centralized buttons, inputs, cards, and layout shell for consistency.",
+		title: "Menu & Cart",
+		description: "Browse food catalog, filter by category, and build your order in real time.",
 	},
 	{
-		title: "Role Separation",
-		description: "Dedicated routes for customer and admin side experiences.",
+		title: "Checkout & Payments",
+		description: "Create orders from cart items and trigger payment processing in one flow.",
 	},
 	{
-		title: "Auth Service Integration",
-		description: "Prepared API functions for auth endpoints with token utilities.",
+		title: "Auth + Admin",
+		description: "Integrated login/register/logout plus admin controls for users and orders.",
 	},
 ];
 
