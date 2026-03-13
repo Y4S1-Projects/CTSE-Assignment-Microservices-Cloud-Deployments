@@ -26,20 +26,21 @@ public class User {
 
     private String fullName;
 
-    @Column(nullable = false, columnDefinition = "VARCHAR(50) DEFAULT 'USER'")
-    private String role;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private boolean isActive;
+    private boolean active;
 
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        isActive = true;
+        active = true;
         if (role == null) {
-            role = "USER";
+            role = Role.CUSTOMER;
         }
     }
 

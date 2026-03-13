@@ -9,7 +9,9 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 public class JwtTokenProvider {
@@ -18,7 +20,7 @@ public class JwtTokenProvider {
     @Value("${app.jwt.secret:your-super-secret-key-change-in-production-env}")
     private String jwtSecret;
 
-    @Value("${app.jwt.expiration:86400000}")
+    @Value("${app.jwt.access-expiration:900000}")
     private long jwtExpiration;
 
     @Value("${app.jwt.issuer:food-ordering-system}")
@@ -28,17 +30,17 @@ public class JwtTokenProvider {
      * Generate JWT token with user details
      * @param userId User ID
      * @param username Username
-     * @param roles User roles
+     * @param role User role
      * @return JWT token string
      */
-    public String generateToken(String userId, String username, List<String> roles) {
+    public String generateToken(String userId, String username, String role) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpiration);
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("username", username);
-        claims.put("roles", roles);
+        claims.put("role", role);
 
         return Jwts.builder()
                 .claims(claims)
@@ -101,15 +103,9 @@ public class JwtTokenProvider {
      * @param token JWT token string
      * @return List of roles
      */
-    @SuppressWarnings("unchecked")
-    public List<String> extractRoles(String token) {
+    public String extractRole(String token) {
         Claims claims = extractAllClaims(token);
-        Object rolesObj = claims.get("roles");
-        
-        if (rolesObj instanceof List) {
-            return (List<String>) rolesObj;
-        }
-        return new ArrayList<>();
+        return claims.get("role", String.class);
     }
 
     /**
