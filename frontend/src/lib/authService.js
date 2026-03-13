@@ -2,25 +2,44 @@ import { apiRequest } from "@/lib/apiClient";
 import { clearAuthSession, getRefreshToken, saveAuthSession } from "@/lib/storage";
 
 export async function registerUser(formData) {
+	const payload = {
+		username: formData.username,
+		email: formData.email,
+		password: formData.password,
+		fullName: formData.fullName,
+	};
+
 	return apiRequest("/auth/register", {
 		method: "POST",
-		body: JSON.stringify(formData),
+		body: JSON.stringify(payload),
 	});
 }
 
 export async function loginUser(credentials) {
+	const payload = {
+		email: credentials.email,
+		password: credentials.password,
+	};
+
 	const data = await apiRequest("/auth/login", {
 		method: "POST",
-		body: JSON.stringify(credentials),
+		body: JSON.stringify(payload),
 	});
+
+	const token = data?.token || data?.accessToken;
+	const user = {
+		userId: data?.userId,
+		username: data?.username || credentials?.email,
+		role: data?.role || "CUSTOMER",
+	};
 
 	saveAuthSession({
-		token: data?.token,
+		token,
 		refreshToken: data?.refreshToken,
-		user: data?.user || { username: credentials?.username },
+		user,
 	});
 
-	return data;
+	return { ...data, user, token };
 }
 
 export async function validateToken(token) {
@@ -59,5 +78,12 @@ export async function getMyProfile() {
 export async function getAllUsers() {
 	return apiRequest("/admin/users", {
 		method: "GET",
+	});
+}
+
+export async function updateUserStatus(id, active) {
+	return apiRequest(`/admin/users/${id}/status`, {
+		method: "PATCH",
+		body: JSON.stringify({ active }),
 	});
 }
