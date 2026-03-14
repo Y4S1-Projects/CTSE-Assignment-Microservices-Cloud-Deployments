@@ -645,7 +645,7 @@ docker-compose up -d
 
 ### Azure Container Apps Deployment
 
-See [AZURE_DEPLOYMENT_GUIDE.md](../AZURE_DEPLOYMENT_GUIDE.md) for detailed Azure deployment instructions.
+See [AZURE_DEPLOYMENT_GUIDE.md](../docs/AZURE_DEPLOYMENT_GUIDE.md) for detailed Azure deployment instructions.
 
 ### Kubernetes Deployment
 

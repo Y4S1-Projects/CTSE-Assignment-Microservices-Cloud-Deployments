@@ -138,5 +138,5 @@ if ($allPassed) {
 }
 
 Write-Host ""
-Write-Host "📚 Documentation: SWAGGER_API_DOCUMENTATION.md" -ForegroundColor Cyan
+Write-Host "📚 Documentation: README.md (API Documentation section)" -ForegroundColor Cyan
 Write-Host ""

@@ -36,8 +36,9 @@ Create `.env.local` in this folder:
 
 ```env
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
-NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:8081
 ```
+
+For Azure deployments, the frontend now resolves the gateway URL at runtime through `/api/runtime-config`, so the same container image can be reused across different Azure accounts and deployments.
 
 ## Run
 
@@ -47,3 +48,15 @@ npm run dev
 ```
 
 Open `http://localhost:3000`.
+
+## Container Deployment
+
+The repository includes a `Dockerfile` for the frontend so it can be deployed alongside the backend services in Azure Container Apps.
+
+At runtime, set:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=https://<gateway-url>
+PORT=3000
+NODE_ENV=production
+```

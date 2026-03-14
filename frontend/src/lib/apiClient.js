@@ -1,8 +1,46 @@
 import { getAuthToken } from "@/lib/storage";
 
-const gatewayBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+let cachedGatewayBase = null;
+let gatewayBasePromise = null;
+
+function normalizeBaseUrl(value) {
+	return typeof value === "string" ? value.replace(/\/$/, "") : "";
+}
+
+async function resolveGatewayBase() {
+	if (cachedGatewayBase) {
+		return cachedGatewayBase;
+	}
+
+	if (typeof window === "undefined") {
+		cachedGatewayBase = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL) || "http://localhost:8080";
+		return cachedGatewayBase;
+	}
+
+	if (!gatewayBasePromise) {
+		gatewayBasePromise = fetch("/api/runtime-config", {
+			cache: "no-store",
+		})
+			.then(async (response) => {
+				if (!response.ok) {
+					return {};
+				}
+
+				return response.json();
+			})
+			.catch(() => ({}));
+	}
+
+	const config = await gatewayBasePromise;
+	cachedGatewayBase =
+		normalizeBaseUrl(config?.apiBaseUrl) ||
+		normalizeBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL) ||
+		"http://localhost:8080";
+	return cachedGatewayBase;
+}
 
 export async function apiRequest(path, options = {}) {
+	const gatewayBase = await resolveGatewayBase();
 	const token = getAuthToken();
 	const headers = {
 		"Content-Type": "application/json",
