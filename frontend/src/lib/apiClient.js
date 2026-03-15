@@ -13,7 +13,7 @@ async function resolveGatewayBase() {
 	}
 
 	if (typeof window === "undefined") {
-		cachedGatewayBase = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL) || "http://localhost:8080";
+		cachedGatewayBase = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL) || "http://localhost:8080";
 		return cachedGatewayBase;
 	}
 
@@ -34,6 +34,7 @@ async function resolveGatewayBase() {
 	const config = await gatewayBasePromise;
 	cachedGatewayBase =
 		normalizeBaseUrl(config?.apiBaseUrl) ||
+		normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL) ||
 		normalizeBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL) ||
 		"http://localhost:8080";
 	return cachedGatewayBase;
