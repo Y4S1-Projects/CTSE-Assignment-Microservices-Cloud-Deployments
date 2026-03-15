@@ -25,7 +25,7 @@ public class OrderServiceClient {
     public Object updateOrderStatus(String orderId, String status) {
         try {
             String url = UriComponentsBuilder
-                .fromHttpUrl(orderServiceUrl + "/orders/{id}/status")
+                .fromUriString(orderServiceUrl + "/orders/{id}/status")
                 .queryParam("status", status)
                 .buildAndExpand(orderId)
                 .toUriString();
