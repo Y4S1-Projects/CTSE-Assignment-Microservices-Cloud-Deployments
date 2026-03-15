@@ -159,7 +159,7 @@ function Deploy-Frontend {
 
     $registry = "ghcr.io"
     $repoLower = $GitHubRepo.ToLower()
-    $webAppName = "ctse-frontend-$(Get-Random -Minimum 1000 -Maximum 9999)"
+    $webAppName = "ctse-frontend"
     $image = "$registry/$repoLower/frontend`:$ImageTag"
 
     Write-Host ""
@@ -168,22 +168,29 @@ function Deploy-Frontend {
     Write-Host "Web App: $webAppName" -ForegroundColor Gray
 
     try {
-        # Create web app
-        az webapp create `
-            --resource-group $ResourceGroup `
-            --plan $AppServicePlanName `
-            --name $webAppName `
-            --deployment-container-image-name $image `
-            --output none
+        # Check if web app already exists
+        $existingApp = az webapp show --name $webAppName --resource-group $ResourceGroup --query "name" --output tsv 2>$null
+        
+        if ([string]::IsNullOrWhiteSpace($existingApp)) {
+            # Create web app
+            az webapp create `
+                --resource-group $ResourceGroup `
+                --plan $AppServicePlanName `
+                --name $webAppName `
+                --deployment-container-image-name $image `
+                --output none
 
-        Write-Host "Created: $webAppName" -ForegroundColor Green
+            Write-Host "Created: $webAppName" -ForegroundColor Green
+        } else {
+            Write-Host "Updating existing: $webAppName" -ForegroundColor Green
+        }
 
         # Configure container
         az webapp config container set `
             --name $webAppName `
             --resource-group $ResourceGroup `
-            --docker-custom-image-name $image `
-            --docker-registry-server-url "https://$registry" `
+            --container-image-name $image `
+            --container-registry-url "https://$registry" `
             --output none
 
         Write-Host "Configured container settings" -ForegroundColor Green
@@ -193,11 +200,15 @@ function Deploy-Frontend {
             az webapp config appsettings set `
                 --resource-group $ResourceGroup `
                 --name $webAppName `
-                --settings NEXT_PUBLIC_API_URL=$GatewayUrl `
+                --settings NEXT_PUBLIC_API_URL=$GatewayUrl NEXT_PUBLIC_API_BASE_URL=$GatewayUrl `
                 --output none
             
             Write-Host "Set API Gateway environment variable" -ForegroundColor Green
         }
+
+        # Restart to pull latest image
+        az webapp restart --name $webAppName --resource-group $ResourceGroup --output none
+        Write-Host "Restarted $webAppName" -ForegroundColor Green
     } catch {
         Write-Host "⚠️  Error deploying frontend: $_" -ForegroundColor Yellow
     }
