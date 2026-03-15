@@ -1,13 +1,15 @@
-# Deploy to Azure Container Apps from GitHub Container Registry
+# Deploy Microservices to Azure Container Apps & Frontend to App Service from GitHub Container Registry
 # No service principal required. Uses the currently logged-in Azure account.
 
 param(
     [string]$ResourceGroup = "ctse-microservices-rg",
     [string]$Location = "eastus",
     [string]$EnvironmentName = "ctse-env",
+    [string]$AppServicePlanName = "ctse-plan",
     [string]$GitHubRepo = "y4s1-projects/ctse-assignment-microservices-cloud-deployments",
     [string]$ImageTag = "latest",
-    [string]$JwtSecret = ""
+    [string]$JwtSecret = "",
+    [switch]$SkipFrontend = $false
 )
 
 $ErrorActionPreference = "Stop"
@@ -51,6 +53,26 @@ function Ensure-ContainerAppEnvironment {
     } else {
         az containerapp env create --name $EnvironmentName --resource-group $ResourceGroup --location $Location --output none
         Write-Host "Created environment: $EnvironmentName" -ForegroundColor Green
+    }
+}
+
+function Ensure-AppServicePlan {
+    Write-Section "Step 3b: Ensure App Service Plan"
+    if (-not $SkipFrontend) {
+        $exists = az appservice plan show --name $AppServicePlanName --resource-group $ResourceGroup 2>$null
+        if ($exists) {
+            Write-Host "App Service Plan already exists: $AppServicePlanName" -ForegroundColor Green
+        } else {
+            Write-Host "Creating App Service Plan: $AppServicePlanName" -ForegroundColor Yellow
+            az appservice plan create `
+                --name $AppServicePlanName `
+                --resource-group $ResourceGroup `
+                --sku B1 `
+                --is-linux `
+                --location $Location `
+                --output none
+            Write-Host "Created App Service Plan: $AppServicePlanName" -ForegroundColor Green
+        }
     }
 }
 
@@ -130,8 +152,67 @@ function Deploy-ContainerApp {
     }
 }
 
+function Deploy-Frontend {
+    param(
+        [string]$GatewayUrl
+    )
+
+    $registry = "ghcr.io"
+    $repoLower = $GitHubRepo.ToLower()
+    $webAppName = "ctse-frontend-$(Get-Random -Minimum 1000 -Maximum 9999)"
+    $image = "$registry/$repoLower/frontend`:$ImageTag"
+
+    Write-Host ""
+    Write-Host "Deploying frontend" -ForegroundColor Cyan
+    Write-Host "Image: $image" -ForegroundColor Gray
+    Write-Host "Web App: $webAppName" -ForegroundColor Gray
+
+    try {
+        # Create web app
+        az webapp create `
+            --resource-group $ResourceGroup `
+            --plan $AppServicePlanName `
+            --name $webAppName `
+            --deployment-container-image-name $image `
+            --output none
+
+        Write-Host "Created: $webAppName" -ForegroundColor Green
+
+        # Configure container
+        az webapp config container set `
+            --name $webAppName `
+            --resource-group $ResourceGroup `
+            --docker-custom-image-name $image `
+            --docker-registry-server-url "https://$registry" `
+            --output none
+
+        Write-Host "Configured container settings" -ForegroundColor Green
+
+        # Set environment variables
+        if (-not [string]::IsNullOrWhiteSpace($GatewayUrl)) {
+            az webapp config appsettings set `
+                --resource-group $ResourceGroup `
+                --name $webAppName `
+                --settings NEXT_PUBLIC_API_URL=$GatewayUrl `
+                --output none
+            
+            Write-Host "Set API Gateway environment variable" -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "⚠️  Error deploying frontend: $_" -ForegroundColor Yellow
+    }
+
+    return $webAppName
+}
+
 function Show-Result {
-    Write-Section "Step 5: Get API Gateway URL"
+    param(
+        [string]$GatewayUrl,
+        [string]$FrontendWebApp
+    )
+
+    Write-Section "Step 5: Deployment Summary"
+    
     try {
         $gatewayUrl = az containerapp show --name "api-gateway" --resource-group $ResourceGroup --query "properties.configuration.ingress.fqdn" --output tsv 2>$null
     } catch {
@@ -142,24 +223,49 @@ function Show-Result {
     Write-Host "Deployment complete." -ForegroundColor Green
     Write-Host ""
 
+    # Show Gateway Info
     if (-not [string]::IsNullOrWhiteSpace($gatewayUrl)) {
-        Write-Host "Gateway URL: https://$gatewayUrl" -ForegroundColor Cyan
-        Write-Host "Health: https://$gatewayUrl/health" -ForegroundColor White
-        Write-Host "Swagger: https://$gatewayUrl/swagger-ui.html" -ForegroundColor White
-        Write-Host "Auth Docs: https://$gatewayUrl/auth/v3/api-docs" -ForegroundColor White
+        Write-Host "✅ API Gateway:" -ForegroundColor Cyan
+        Write-Host "  URL: https://$gatewayUrl" -ForegroundColor Green
+        Write-Host "  Health: https://$gatewayUrl/health" -ForegroundColor White
+        Write-Host "  Swagger: https://$gatewayUrl/swagger-ui.html" -ForegroundColor White
+        Write-Host "  Auth Docs: https://$gatewayUrl/auth/v3/api-docs" -ForegroundColor White
         Write-Host ""
-        Write-Host "Quick test commands:" -ForegroundColor Yellow
+    } else {
+        Write-Host "⚠️  API Gateway URL not yet available" -ForegroundColor Yellow
+        Write-Host "Run: az containerapp show --name api-gateway --resource-group $ResourceGroup --query properties.configuration.ingress.fqdn -o tsv" -ForegroundColor Gray
+        Write-Host ""
+    }
+
+    # Show Frontend Info
+    if (-not [string]::IsNullOrWhiteSpace($FrontendWebApp) -and -not $SkipFrontend) {
+        try {
+            $frontendUrl = az webapp show --name $FrontendWebApp --resource-group $ResourceGroup --query "defaultHostName" --output tsv 2>$null
+            if (-not [string]::IsNullOrWhiteSpace($frontendUrl)) {
+                Write-Host "✅ Frontend Web App:" -ForegroundColor Cyan
+                Write-Host "  Name: $FrontendWebApp" -ForegroundColor White
+                Write-Host "  URL: https://$frontendUrl" -ForegroundColor Green
+                Write-Host ""
+            }
+        } catch {
+            Write-Host "⚠️  Could not retrieve frontend URL" -ForegroundColor Yellow
+        }
+    }
+
+    # Show Quick Test Commands
+    Write-Host "Quick test commands:" -ForegroundColor Yellow
+    if (-not [string]::IsNullOrWhiteSpace($gatewayUrl)) {
         Write-Host "curl https://$gatewayUrl/health" -ForegroundColor Gray
         Write-Host "POST https://$gatewayUrl/auth/register" -ForegroundColor Gray
-        Write-Host "(Use Swagger UI for request body testing)" -ForegroundColor Gray
-    } else {
-        Write-Host "Could not resolve gateway URL yet. Check Azure portal or run:" -ForegroundColor Yellow
-        Write-Host "az containerapp show --name api-gateway --resource-group $ResourceGroup --query properties.configuration.ingress.fqdn -o tsv" -ForegroundColor Gray
     }
+    Write-Host "(Use Swagger UI for request body testing)" -ForegroundColor Gray
 
     Write-Host ""
     Write-Host "Monitor apps:" -ForegroundColor Yellow
     Write-Host "az containerapp list --resource-group $ResourceGroup --output table" -ForegroundColor Gray
+    if (-not $SkipFrontend) {
+        Write-Host "az webapp list --resource-group $ResourceGroup --output table" -ForegroundColor Gray
+    }
     Write-Host ""
     Write-Host "Delete all resources:" -ForegroundColor Yellow
     Write-Host "az group delete --name $ResourceGroup --yes --no-wait" -ForegroundColor Gray
@@ -177,10 +283,16 @@ Write-Host "Location: $Location" -ForegroundColor White
 Write-Host "Environment: $EnvironmentName" -ForegroundColor White
 Write-Host "Repository: $GitHubRepo" -ForegroundColor White
 Write-Host "Image Tag: $ImageTag" -ForegroundColor White
+if (-not $SkipFrontend) {
+    Write-Host "App Service Plan: $AppServicePlanName" -ForegroundColor White
+}
 
 Ensure-AzureLogin
 Ensure-ResourceGroup
 Ensure-ContainerAppEnvironment
+if (-not $SkipFrontend) {
+    Ensure-AppServicePlan
+}
 
 Write-Section "Step 4: Deploy Services"
 
@@ -197,4 +309,22 @@ Deploy-ContainerApp -ServiceName "api-gateway" -Port 8080 -Ingress "external" -E
     PAYMENT_SERVICE_URL = "http://payment-service"
 }
 
-Show-Result
+# Get gateway URL for frontend
+$gatewayUrl = ""
+try {
+    $gatewayUrl = az containerapp show --name "api-gateway" --resource-group $ResourceGroup --query "properties.configuration.ingress.fqdn" --output tsv 2>$null
+    if (-not [string]::IsNullOrWhiteSpace($gatewayUrl)) {
+        $gatewayUrl = "https://$gatewayUrl"
+    }
+} catch {
+    $gatewayUrl = ""
+}
+
+# Deploy Frontend
+$frontendApp = ""
+if (-not $SkipFrontend) {
+    Write-Section "Step 4b: Deploy Frontend"
+    $frontendApp = Deploy-Frontend -GatewayUrl $gatewayUrl
+}
+
+Show-Result -GatewayUrl $gatewayUrl -FrontendWebApp $frontendApp
