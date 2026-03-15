@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Button from "@/components/common/Button";
 import Card from "@/components/common/Card";
 import Input from "@/components/common/Input";
@@ -176,8 +177,6 @@ export default function AdminPage() {
 
 	const tabs = [
 		{ id: "dashboard", label: "Dashboard" },
-		{ id: "inventory", label: "Inventory" },
-		{ id: "add-item", label: "Add Item" },
 		{ id: "orders", label: "Orders" },
 		{ id: "users", label: "Users" },
 	];
@@ -261,138 +260,18 @@ export default function AdminPage() {
 				</div>
 			)}
 
-			{/* ── Inventory tab ── */}
-			{activeTab === "inventory" && (
-				<Card className='space-y-4'>
-					<div className='flex items-center justify-between'>
-						<h2 className='text-lg font-semibold text-slate-900'>Inventory Management</h2>
-						<Button variant='secondary' onClick={loadData}>Refresh</Button>
-					</div>
-					<div className='overflow-x-auto'>
-						<table className='min-w-full text-left text-sm'>
-							<thead>
-								<tr className='border-b border-brand-100 text-brand-800'>
-									<th className='py-2 pr-4'>Item ID</th>
-									<th className='py-2 pr-4'>Name</th>
-									<th className='py-2 pr-4'>Category</th>
-									<th className='py-2 pr-4'>Price</th>
-									<th className='py-2 pr-4'>Stock</th>
-									<th className='py-2 pr-4'>Status</th>
-									<th className='py-2 pr-4'>Actions</th>
-								</tr>
-							</thead>
-							<tbody>
-								{menuItems.map((item) => (
-									<tr key={item.id} className='border-b border-brand-50 text-slate-700'>
-										<td className='py-2 pr-4 font-mono text-xs'>{item.itemId || item.id}</td>
-										<td className='py-2 pr-4 font-medium'>{item.name}</td>
-										<td className='py-2 pr-4'>{item.category}</td>
-										<td className='py-2 pr-4'>{formatPrice(item.price)}</td>
-										<td className='py-2 pr-4'>
-											<div className='flex items-center gap-2'>
-												<input
-													type='number'
-													min='0'
-													value={editingStock[item.id] !== undefined ? editingStock[item.id] : item.stockCount}
-													onChange={(e) => setEditingStock((prev) => ({ ...prev, [item.id]: e.target.value }))}
-													className='w-20 rounded border border-slate-300 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-400'
-												/>
-												{editingStock[item.id] !== undefined && (
-													<button
-														type='button'
-														onClick={() => handleSaveStock(item)}
-														className='rounded bg-brand-600 px-2 py-1 text-xs text-white hover:bg-brand-700'>
-														Save
-													</button>
-												)}
-											</div>
-										</td>
-										<td className='py-2 pr-4'>
-											<span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-												item.stockCount === 0 ? "bg-red-100 text-red-700" :
-												item.stockCount <= 5 ? "bg-yellow-100 text-yellow-700" :
-												"bg-green-100 text-green-700"
-											}`}>
-												{item.stockCount === 0 ? "Out of stock" : item.stockCount <= 5 ? "Low" : "In stock"}
-											</span>
-										</td>
-										<td className='py-2 pr-4'>
-											<button
-												type='button'
-												onClick={() => handleDeleteItem(item)}
-												className='rounded bg-red-100 px-2 py-1 text-xs text-red-700 hover:bg-red-200'>
-												Delete
-											</button>
-										</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
-				</Card>
-			)}
-
-			{/* ── Add Item tab ── */}
-			{activeTab === "add-item" && (
-				<Card className='space-y-4'>
-					<h2 className='text-lg font-semibold text-slate-900'>Add New Catalog Item</h2>
-					<form className='grid gap-4 sm:grid-cols-2' onSubmit={handleAddItem}>
-						<Input
-							label='Item Name *'
-							value={itemForm.name}
-							onChange={(e) => setItemForm((f) => ({ ...f, name: e.target.value }))}
-							required
-						/>
-						<Input
-							label='Category *'
-							placeholder='e.g. Main, Drinks, Desserts'
-							value={itemForm.category}
-							onChange={(e) => setItemForm((f) => ({ ...f, category: e.target.value }))}
-							required
-						/>
-						<Input
-							label='Price ($) *'
-							type='number'
-							step='0.01'
-							min='0'
-							value={itemForm.price}
-							onChange={(e) => setItemForm((f) => ({ ...f, price: e.target.value }))}
-							required
-						/>
-						<Input
-							label='Initial Stock *'
-							type='number'
-							min='0'
-							value={itemForm.stockCount}
-							onChange={(e) => setItemForm((f) => ({ ...f, stockCount: e.target.value }))}
-							required
-						/>
-						<Input
-							label='Description'
-							value={itemForm.description}
-							onChange={(e) => setItemForm((f) => ({ ...f, description: e.target.value }))}
-						/>
-						<Input
-							label='Image URL'
-							type='url'
-							placeholder='https://...'
-							value={itemForm.imageUrl}
-							onChange={(e) => setItemForm((f) => ({ ...f, imageUrl: e.target.value }))}
-						/>
-						<Input
-							label='Custom Item ID (optional)'
-							placeholder='e.g. ITEM-0010'
-							value={itemForm.itemId}
-							onChange={(e) => setItemForm((f) => ({ ...f, itemId: e.target.value }))}
-						/>
-						<div className='flex items-end sm:col-span-2'>
-							<Button type='submit' disabled={savingItem} className='w-full sm:w-auto'>
-								{savingItem ? "Adding…" : "Add to Catalog"}
-							</Button>
-						</div>
-					</form>
-				</Card>
-			)}
+			{/* ── Catalog shortcut card ── */}
+			<Card className='flex items-center justify-between gap-4'>
+				<div>
+					<h2 className='text-base font-semibold text-slate-900'>Catalog &amp; Inventory</h2>
+					<p className='text-sm text-slate-500'>Manage items, stock levels and pricing</p>
+				</div>
+				<Link
+					href='/admin/catalog'
+					className='rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition whitespace-nowrap'>
+					Go to Catalog →
+				</Link>
+			</Card>
 
 			{/* ── Orders tab ── */}
 			{activeTab === "orders" && (
@@ -516,181 +395,3 @@ export default function AdminPage() {
 	);
 }
 
-export default function AdminPage() {
-	const router = useRouter();
-	const [users, setUsers] = useState([]);
-	const [menuItems, setMenuItems] = useState([]);
-	const [orderId, setOrderId] = useState("");
-	const [orderStatus, setOrderStatus] = useState("PREPARING");
-	const [error, setError] = useState("");
-	const [success, setSuccess] = useState("");
-	const [authorized, setAuthorized] = useState(false);
-
-	async function loadData() {
-		setError("");
-		try {
-			const [usersData, menuData] = await Promise.all([getAllUsers(), getMenuItems()]);
-			setUsers(Array.isArray(usersData) ? usersData : []);
-			setMenuItems(Array.isArray(menuData) ? menuData : []);
-		} catch (loadError) {
-			setError(loadError.message || "Failed to load admin data");
-		}
-	}
-
-	useEffect(() => {
-		if (!getAuthToken()) {
-			router.replace("/auth/login");
-			return;
-		}
-
-		if (!isAdminUser()) {
-			router.replace("/customer");
-			return;
-		}
-
-		setAuthorized(true);
-		loadData();
-	}, [router]);
-
-	async function handleToggleUser(user) {
-		setError("");
-		setSuccess("");
-		try {
-			await updateUserStatus(user.id, !user.active);
-			setSuccess(`Updated status for ${user.username}`);
-			await loadData();
-		} catch (updateError) {
-			setError(updateError.message || "Failed to update user status");
-		}
-	}
-
-	async function handleToggleAvailability(item) {
-		setError("");
-		setSuccess("");
-		const next = (item.availability || "AVAILABLE").toUpperCase() === "AVAILABLE" ? "UNAVAILABLE" : "AVAILABLE";
-		try {
-			await updateMenuAvailability(item.id, next);
-			setSuccess(`Menu item ${item.name} set to ${next}`);
-			await loadData();
-		} catch (updateError) {
-			setError(updateError.message || "Failed to update item availability");
-		}
-	}
-
-	async function handleOrderStatus(event) {
-		event.preventDefault();
-		setError("");
-		setSuccess("");
-		try {
-			await updateOrderStatus(orderId, orderStatus);
-			setSuccess(`Order ${orderId} updated to ${orderStatus}`);
-			setOrderId("");
-		} catch (updateError) {
-			setError(updateError.message || "Failed to update order status");
-		}
-	}
-
-	async function handleLogout() {
-		await logoutUser();
-		window.location.href = "/auth/login";
-	}
-
-	if (!authorized) {
-		return (
-			<Card className='mx-auto mt-10 max-w-xl'>
-				<p className='text-sm text-slate-600'>Checking admin access...</p>
-			</Card>
-		);
-	}
-
-	return (
-		<div className='space-y-6'>
-			<Card className='space-y-2'>
-				<div className='flex flex-wrap items-center justify-between gap-3'>
-					<h1 className='text-2xl font-bold text-slate-900'>Admin Control Center</h1>
-					<Button onClick={handleLogout}>Logout</Button>
-				</div>
-				<p className='text-sm text-slate-600'>Manage users, food availability, and order status updates.</p>
-				{error ?
-					<p className='text-sm text-red-600'>{error}</p>
-				:	null}
-				{success ?
-					<p className='text-sm text-green-700'>{success}</p>
-				:	null}
-			</Card>
-
-			<section className='grid gap-6 lg:grid-cols-2'>
-				<Card className='space-y-4'>
-					<h2 className='text-lg font-semibold text-brand-800'>Users</h2>
-					<div className='overflow-x-auto'>
-						<table className='min-w-full text-left text-sm'>
-							<thead>
-								<tr className='border-b border-brand-100 text-brand-800'>
-									<th className='py-2 pr-4'>Username</th>
-									<th className='py-2 pr-4'>Role</th>
-									<th className='py-2 pr-4'>Active</th>
-									<th className='py-2 pr-4'>Action</th>
-								</tr>
-							</thead>
-							<tbody>
-								{users.map((user) => (
-									<tr key={user.id || user.username} className='border-b border-brand-50 text-slate-700'>
-										<td className='py-2 pr-4'>{user.username}</td>
-										<td className='py-2 pr-4'>{user.role}</td>
-										<td className='py-2 pr-4'>{user.active ? "Yes" : "No"}</td>
-										<td className='py-2 pr-4'>
-											<Button variant='secondary' onClick={() => handleToggleUser(user)}>
-												{user.active ? "Deactivate" : "Activate"}
-											</Button>
-										</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
-				</Card>
-
-				<Card className='space-y-4'>
-					<h2 className='text-lg font-semibold text-brand-800'>Menu Availability</h2>
-					<div className='space-y-3'>
-						{menuItems.map((item) => (
-							<div key={item.id} className='flex items-center justify-between rounded-xl border border-brand-100 p-3'>
-								<div>
-									<p className='font-medium text-slate-900'>{item.name}</p>
-									<p className='text-sm text-slate-600'>Current: {item.availability || "AVAILABLE"}</p>
-								</div>
-								<Button variant='secondary' onClick={() => handleToggleAvailability(item)}>
-									Toggle
-								</Button>
-							</div>
-						))}
-					</div>
-				</Card>
-			</section>
-
-			<Card className='space-y-4'>
-				<h2 className='text-lg font-semibold text-brand-800'>Update Order Status</h2>
-				<form className='grid gap-3 sm:grid-cols-3' onSubmit={handleOrderStatus}>
-					<Input label='Order ID' value={orderId} onChange={(event) => setOrderId(event.target.value)} required />
-					<label className='block space-y-1.5'>
-						<span className='text-sm font-medium text-slate-700'>Status</span>
-						<select
-							value={orderStatus}
-							onChange={(event) => setOrderStatus(event.target.value)}
-							className='w-full rounded-xl border border-brand-200 bg-white px-3.5 py-2.5 text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200'>
-							<option value='PREPARING'>PREPARING</option>
-							<option value='READY'>READY</option>
-							<option value='DELIVERED'>DELIVERED</option>
-							<option value='CANCELLED'>CANCELLED</option>
-						</select>
-					</label>
-					<div className='flex items-end'>
-						<Button type='submit' className='w-full'>
-							Update Status
-						</Button>
-					</div>
-				</form>
-			</Card>
-		</div>
-	);
-}

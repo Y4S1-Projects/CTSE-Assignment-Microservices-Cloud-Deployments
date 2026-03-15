@@ -70,7 +70,7 @@ export async function logoutUser() {
 }
 
 export async function getMyProfile() {
-	return apiRequest("/users/me", {
+	return apiRequest("/auth/users/me", {
 		method: "GET",
 	});
 }

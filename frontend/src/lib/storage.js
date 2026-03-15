@@ -40,7 +40,12 @@ export function isAuthenticated() {
 
 export function isAdminUser() {
 	const user = getCurrentUser();
-	return (user?.role || "").toUpperCase() === "ADMIN";
+	if (!user) return false;
+	const role = user.role;
+	// Support numeric role (1 = admin) and string variants
+	if (role === 1 || role === "1") return true;
+	const roleStr = String(role || "").toUpperCase();
+	return roleStr === "ADMIN" || roleStr === "ROLE_ADMIN";
 }
 
 export function getCart() {

@@ -2,6 +2,8 @@ package com.example.catalogservice.service;
 
 import com.example.catalogservice.dto.*;
 import com.example.catalogservice.entity.MenuItem;
+import com.example.catalogservice.exception.DuplicateItemException;
+import com.example.catalogservice.exception.ItemNotFoundException;
 import com.example.catalogservice.repository.MenuItemRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -38,7 +40,13 @@ public class CatalogServiceImpl implements CatalogService {
     }
 
     private String generateItemId() {
-        return "ITEM-" + String.format("%04d", (int)(Math.random() * 9000) + 1000);
+        String id;
+        int attempts = 0;
+        do {
+            id = "ITEM-" + String.format("%04d", (int)(Math.random() * 9000) + 1000);
+            attempts++;
+        } while (menuItemRepository.existsByItemId(id) && attempts < 20);
+        return id;
     }
 
     // ── read operations ───────────────────────────────────────────────────────
@@ -53,7 +61,7 @@ public class CatalogServiceImpl implements CatalogService {
     public MenuItemResponse getItemById(String id) {
         logger.info("Fetching item by DB id: {}", id);
         MenuItem item = menuItemRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Item not found: " + id));
+                .orElseThrow(() -> new ItemNotFoundException("Item not found with id: " + id));
         return toResponse(item);
     }
 
@@ -61,7 +69,7 @@ public class CatalogServiceImpl implements CatalogService {
     public MenuItemResponse getItemByItemId(String itemId) {
         logger.info("Fetching item by itemId: {}", itemId);
         MenuItem item = menuItemRepository.findByItemId(itemId)
-                .orElseThrow(() -> new RuntimeException("Item not found: " + itemId));
+                .orElseThrow(() -> new ItemNotFoundException("Item not found with itemId: " + itemId));
         return toResponse(item);
     }
 
@@ -83,7 +91,7 @@ public class CatalogServiceImpl implements CatalogService {
                 : generateItemId();
 
         if (menuItemRepository.existsByItemId(itemId)) {
-            throw new RuntimeException("Item ID already exists: " + itemId);
+            throw new DuplicateItemException("Item ID already exists: " + itemId);
         }
 
         MenuItem item = MenuItem.builder()
@@ -106,7 +114,7 @@ public class CatalogServiceImpl implements CatalogService {
     @Transactional
     public MenuItemResponse updateItem(String id, MenuItemRequest request) {
         MenuItem item = menuItemRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Item not found: " + id));
+                .orElseThrow(() -> new ItemNotFoundException("Item not found with id: " + id));
 
         if (request.getName() != null)        item.setName(request.getName());
         if (request.getDescription() != null)  item.setDescription(request.getDescription());
@@ -125,7 +133,7 @@ public class CatalogServiceImpl implements CatalogService {
     @Transactional
     public void deleteItem(String id) {
         if (!menuItemRepository.existsById(id)) {
-            throw new RuntimeException("Item not found: " + id);
+            throw new ItemNotFoundException("Item not found with id: " + id);
         }
         menuItemRepository.deleteById(id);
         logger.info("Deleted item: {}", id);
@@ -137,7 +145,7 @@ public class CatalogServiceImpl implements CatalogService {
     @Transactional
     public MenuItemResponse updateStock(String id, StockUpdateRequest request) {
         MenuItem item = menuItemRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Item not found: " + id));
+                .orElseThrow(() -> new ItemNotFoundException("Item not found with id: " + id));
 
         if (request.getStockCount() != null) {
             item.setStockCount(request.getStockCount());
@@ -153,7 +161,7 @@ public class CatalogServiceImpl implements CatalogService {
     @Transactional
     public MenuItemResponse decrementStock(String itemId, int quantity) {
         MenuItem item = menuItemRepository.findByItemId(itemId)
-                .orElseThrow(() -> new RuntimeException("Item not found: " + itemId));
+                .orElseThrow(() -> new ItemNotFoundException("Item not found with itemId: " + itemId));
 
         int newStock = item.getStockCount() - quantity;
         if (newStock < 0) {

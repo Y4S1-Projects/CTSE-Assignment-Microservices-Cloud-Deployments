@@ -51,16 +51,30 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/webjars"
     };
 
+    /** Catalog browse paths that are public for GET/HEAD only */
+    private static final String[] PUBLIC_GET_PATHS = {
+            "/catalog/items",
+            "/catalog/categories",
+            "/catalog/dashboard",
+    };
+
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getPath().value();
+        String method = request.getMethod().name();
 
-        logger.debug("Processing request: {} {}", request.getMethod(), path);
+        logger.debug("Processing request: {} {}", method, path);
 
-        // Check if the request path is a public endpoint
+        // Check if the request path is a public endpoint (method-agnostic)
         if (isPublicEndpoint(path)) {
             logger.debug("Public endpoint accessed: {}", path);
+            return chain.filter(exchange);
+        }
+
+        // Allow GET/HEAD on catalog browse paths without a token
+        if (("GET".equals(method) || "HEAD".equals(method)) && isPublicGetPath(path)) {
+            logger.debug("Public GET catalog path: {}", path);
             return chain.filter(exchange);
         }
 
@@ -103,6 +117,18 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private boolean isPublicEndpoint(String path) {
         for (String endpoint : PUBLIC_ENDPOINTS) {
             if (path.startsWith(endpoint)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Catalog browse paths that are accessible via GET without authentication
+     */
+    private boolean isPublicGetPath(String path) {
+        for (String prefix : PUBLIC_GET_PATHS) {
+            if (path.startsWith(prefix)) {
                 return true;
             }
         }
