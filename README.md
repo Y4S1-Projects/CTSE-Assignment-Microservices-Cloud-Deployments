@@ -6,8 +6,8 @@
 
 > **🚨 IMPORTANT FOR UNIVERSITY ACCOUNTS:**
 >
-> - Use [AZURE_DEPLOYMENT_GUIDE.md](AZURE_DEPLOYMENT_GUIDE.md) as the single deployment guide
-> - Recommended path: `git push origin main` → `az login` → `./deploy-from-github.ps1`
+> - Use [docs/AZURE_DEPLOYMENT_GUIDE.md](docs/AZURE_DEPLOYMENT_GUIDE.md) as the single deployment guide
+> - Recommended path: `git push origin main` → `az login` → `./deployment/deploy-from-github.ps1`
 
 ---
 
@@ -265,6 +265,9 @@ Full technical documentation including:
 
 ```
 CTSE-Assignment-Microservices-Cloud-Deployments/
+├── docs/                     # Root-level project/deployment documentation
+├── deployment/               # Azure deployment scripts
+├── scripts/                  # Root-level utility/testing scripts
 ├── api-gateway/              # API Gateway service
 │   ├── src/main/java/com/example/apigateway/
 │   │   ├── filter/           # JWT, Rate Limit, Logging filters
@@ -339,25 +342,42 @@ git push origin main
 az login
 
 # 3) Deploy using built images
-./deploy-from-github.ps1
+./deployment/deploy-from-github.ps1
 ```
+
+The deployment now targets a low-cost Azure Container Apps setup for demos:
+
+- resource group: `ctse-assignment`
+- environment: `ctse-assignment-env`
+- services: `frontend`, `api-gateway`, `auth-service`, `catalog-service`, `order-service`, `payment-service`
+- scale: `min replicas = 0`, `max replicas = 1`
+- smaller CPU and memory allocations to reduce credit consumption
 
 ### Deployment Guide and Scripts
 
-- Single source of truth: [AZURE_DEPLOYMENT_GUIDE.md](AZURE_DEPLOYMENT_GUIDE.md)
-- Main script: `deploy-from-github.ps1`
+- Single source of truth: [docs/AZURE_DEPLOYMENT_GUIDE.md](docs/AZURE_DEPLOYMENT_GUIDE.md)
+- Main script: `deployment/deploy-from-github.ps1`
 
 ### Verify Deployment
 
 ```powershell
 # Get gateway URL
-az containerapp show --name api-gateway --resource-group ctse-microservices-rg --query properties.configuration.ingress.fqdn -o tsv
+az containerapp show --name ctse-assignment-api-gateway --resource-group ctse-assignment --query properties.configuration.ingress.fqdn -o tsv
+
+# Get frontend URL
+az containerapp show --name ctse-assignment-frontend --resource-group ctse-assignment --query properties.configuration.ingress.fqdn -o tsv
 
 # Health check
 curl https://<gateway-url>/health
 
 # Auth health via gateway
 curl https://<gateway-url>/auth/health
+```
+
+Delete the resource group after the demo if you want to stop all Azure credit usage:
+
+```powershell
+az group delete --name ctse-assignment --yes --no-wait
 ```
 
 ### Local Docker Compose (Development)

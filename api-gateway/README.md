@@ -550,7 +550,7 @@ networks:
 
 ### Azure Container Apps
 
-See [AZURE_DEPLOYMENT_GUIDE.md](../AZURE_DEPLOYMENT_GUIDE.md) for complete Azure deployment instructions.
+See [AZURE_DEPLOYMENT_GUIDE.md](../docs/AZURE_DEPLOYMENT_GUIDE.md) for complete Azure deployment instructions.
 
 ---
 
