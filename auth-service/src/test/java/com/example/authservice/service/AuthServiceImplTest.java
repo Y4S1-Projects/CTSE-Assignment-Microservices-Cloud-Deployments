@@ -183,11 +183,12 @@ class AuthServiceImplTest {
     void refresh_validToken_returnsNewTokens() {
         RefreshToken rt = RefreshToken.builder()
                 .token("valid_rt")
-                .user(activeUser)
+                .userId(activeUser.getId())
                 .expiryDate(LocalDateTime.now().plusDays(7))
                 .revoked(false)
                 .build();
         when(refreshTokenRepository.findByTokenAndRevokedFalse("valid_rt")).thenReturn(Optional.of(rt));
+        when(userRepository.findById(activeUser.getId())).thenReturn(Optional.of(activeUser));
 
         LoginResponse resp = authService.refresh(RefreshRequest.builder().refreshToken("valid_rt").build());
 
@@ -208,7 +209,7 @@ class AuthServiceImplTest {
     void refresh_expiredToken_revokesAndThrowsInvalidCredentials() {
         RefreshToken expired = RefreshToken.builder()
                 .token("exp_rt")
-                .user(activeUser)
+                .userId(activeUser.getId())
                 .expiryDate(LocalDateTime.now().minusHours(1))
                 .revoked(false)
                 .build();
@@ -228,7 +229,7 @@ class AuthServiceImplTest {
 
     @Test
     void logout_validToken_revokesToken() {
-        RefreshToken rt = RefreshToken.builder().token("rt").user(activeUser).revoked(false).build();
+        RefreshToken rt = RefreshToken.builder().token("rt").userId(activeUser.getId()).revoked(false).build();
         when(refreshTokenRepository.findByTokenAndRevokedFalse("rt")).thenReturn(Optional.of(rt));
 
         authService.logout(RefreshRequest.builder().refreshToken("rt").build());
@@ -304,11 +305,12 @@ class AuthServiceImplTest {
     void resetPassword_validToken_changesPassword() {
         PasswordResetToken prt = PasswordResetToken.builder()
                 .token("rt-abc")
-                .user(activeUser)
+                .userId(activeUser.getId())
                 .expiryDate(LocalDateTime.now().plusMinutes(30))
                 .used(false)
                 .build();
         when(passwordResetTokenRepository.findByTokenAndUsedFalse("rt-abc")).thenReturn(Optional.of(prt));
+        when(userRepository.findById(activeUser.getId())).thenReturn(Optional.of(activeUser));
         when(passwordEncoder.encode("new_pw")).thenReturn("new_hashed");
         when(userRepository.save(any())).thenReturn(activeUser);
         when(passwordResetTokenRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -336,7 +338,7 @@ class AuthServiceImplTest {
     void resetPassword_expiredToken_throwsInvalidCredentials() {
         PasswordResetToken expired = PasswordResetToken.builder()
                 .token("exp-rt")
-                .user(activeUser)
+                .userId(activeUser.getId())
                 .expiryDate(LocalDateTime.now().minusMinutes(1))
                 .used(false)
                 .build();

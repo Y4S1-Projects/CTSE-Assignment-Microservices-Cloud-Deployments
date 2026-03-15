@@ -9,6 +9,7 @@ param(
     [string]$GitHubRepo = "y4s1-projects/ctse-assignment-microservices-cloud-deployments",
     [string]$ImageTag = "latest",
     [string]$JwtSecret = "",
+    [string]$MongoDbUri = "",
     [string]$GitHubUsername = "",
     [string]$GitHubToken = ""
 )
@@ -251,6 +252,12 @@ Write-Host "Location: $Location" -ForegroundColor White
 Write-Host "Environment: $EnvironmentName" -ForegroundColor White
 Write-Host "Repository: $GitHubRepo" -ForegroundColor White
 Write-Host "Image Tag: $ImageTag" -ForegroundColor White
+
+if ([string]::IsNullOrWhiteSpace($MongoDbUri)) {
+    Write-Host "MongoDbUri not provided. auth-service will use its internal default URI." -ForegroundColor Yellow
+    Write-Host "For cloud deployments, pass -MongoDbUri with a reachable MongoDB connection string." -ForegroundColor Yellow
+}
+
 Ensure-AzureLogin
 Ensure-ContainerAppCli
 Ensure-ResourceGroup
@@ -273,7 +280,12 @@ Write-Host "  Payment: $($ResolvedAppNames['payment-service'])" -ForegroundColor
 
 Write-Section "Step 5: Deploy Backend Services"
 
-Deploy-ContainerApp -ServiceName "auth-service" -Port 8081 -Ingress "internal" -EnvVars @{ JWT_SECRET = $JwtSecret }
+$authEnvVars = @{ JWT_SECRET = $JwtSecret }
+if (-not [string]::IsNullOrWhiteSpace($MongoDbUri)) {
+    $authEnvVars["MONGODB_URI"] = $MongoDbUri
+}
+
+Deploy-ContainerApp -ServiceName "auth-service" -Port 8081 -Ingress "internal" -EnvVars $authEnvVars
 Deploy-ContainerApp -ServiceName "catalog-service" -Port 8082 -Ingress "internal" -EnvVars @{ JWT_SECRET = $JwtSecret }
 Deploy-ContainerApp -ServiceName "order-service" -Port 8083 -Ingress "internal" -EnvVars @{ JWT_SECRET = $JwtSecret }
 Deploy-ContainerApp -ServiceName "payment-service" -Port 8084 -Ingress "internal" -EnvVars @{ JWT_SECRET = $JwtSecret }
