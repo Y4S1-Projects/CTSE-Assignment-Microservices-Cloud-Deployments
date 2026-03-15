@@ -2,13 +2,12 @@ package com.example.paymentservice.service;
 
 import com.example.paymentservice.dto.PaymentRequest;
 import com.example.paymentservice.dto.PaymentResponse;
+import java.util.List;
 
-/**
- * PaymentService interface
- * Implementation will be added during feature development
- */
 public interface PaymentService {
-    PaymentResponse processPayment(PaymentRequest request);
-    PaymentResponse getPaymentByOrderId(String orderId);
+    PaymentResponse checkout(PaymentRequest request);
+    List<PaymentResponse> getAllOrders();
     PaymentResponse getPaymentById(String paymentId);
+    PaymentResponse getPaymentByOrderId(String orderId);
+    List<PaymentResponse> getPaymentsByUser(String userId);
 }

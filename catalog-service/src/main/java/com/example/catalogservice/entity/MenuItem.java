@@ -16,6 +16,9 @@ public class MenuItem {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
+    @Column(nullable = false, unique = true)
+    private String itemId;  // business-level unique identifier (e.g. "ITEM-001")
+
     @Column(nullable = false)
     private String name;
 
@@ -24,10 +27,15 @@ public class MenuItem {
     @Column(nullable = false)
     private BigDecimal price;
 
-    @Column(columnDefinition = "VARCHAR(50) DEFAULT 'AVAILABLE'")
-    private String availability;
-
+    @Column(nullable = false)
     private String category;
+
+    @Column(nullable = false)
+    private Integer stockCount;
+
+    @Column(columnDefinition = "BOOLEAN DEFAULT TRUE")
+    private Boolean available;
+
     private String imageUrl;
 
     private LocalDateTime createdAt;
@@ -37,13 +45,13 @@ public class MenuItem {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        if (availability == null) {
-            availability = "AVAILABLE";
-        }
+        if (available == null) available = true;
+        if (stockCount == null) stockCount = 0;
     }
 
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+        available = stockCount != null && stockCount > 0;
     }
 }

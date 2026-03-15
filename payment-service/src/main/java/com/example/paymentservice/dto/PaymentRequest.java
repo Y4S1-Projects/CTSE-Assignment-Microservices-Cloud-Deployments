@@ -8,6 +8,10 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaymentRequest {
-    private String orderId;
+    private String itemId;          // catalog business itemId (e.g. "ITEM-1234")
+    private String userId;
+    private Integer quantity;
     private BigDecimal amount;
+    private String paymentMethod;   // CARD, CASH, ONLINE
+    private String orderId;         // optional
 }

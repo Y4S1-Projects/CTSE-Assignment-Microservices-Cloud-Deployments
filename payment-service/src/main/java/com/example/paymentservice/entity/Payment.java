@@ -16,14 +16,31 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
+    /** Business-level item ID from catalog service (e.g. "ITEM-1234") */
     @Column(nullable = false)
+    private String itemId;
+
+    /** Optional link to an order record */
     private String orderId;
+
+    @Column(nullable = false)
+    private String userId;
+
+    @Column(nullable = false)
+    private Integer quantity;
 
     @Column(nullable = false)
     private BigDecimal amount;
 
+    @Column(nullable = false)
+    private String paymentMethod;   // CARD, CASH, ONLINE
+
     @Column(columnDefinition = "VARCHAR(50) DEFAULT 'PENDING'")
-    private String status;
+    private String status;          // PENDING, COMPLETED, FAILED
+
+    /** True once checkout is confirmed and stock has been decremented */
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private Boolean isSuccessCheckout;
 
     private String reference;
 
@@ -34,9 +51,10 @@ public class Payment {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        if (status == null) {
-            status = "PENDING";
-        }
+        if (status == null)              status = "PENDING";
+        if (isSuccessCheckout == null)   isSuccessCheckout = false;
+        if (paymentMethod == null)       paymentMethod = "CARD";
+        if (quantity == null)            quantity = 1;
     }
 
     @PreUpdate

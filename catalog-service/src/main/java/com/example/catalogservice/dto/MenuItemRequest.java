@@ -2,22 +2,17 @@ package com.example.catalogservice.dto;
 
 import lombok.*;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class MenuItemResponse {
-    private String id;
-    private String itemId;
+public class MenuItemRequest {
+    private String itemId;       // optional; auto-generated if blank
     private String name;
     private String description;
     private BigDecimal price;
     private String category;
     private Integer stockCount;
-    private Boolean available;
     private String imageUrl;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 }
