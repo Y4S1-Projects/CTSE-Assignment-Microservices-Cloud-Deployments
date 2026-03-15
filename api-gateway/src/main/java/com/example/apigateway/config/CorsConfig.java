@@ -16,8 +16,14 @@ public class CorsConfig {
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
         
-        // Allow all origins in development (configure properly for production)
-        corsConfig.setAllowedOriginPatterns(List.of("*"));
+        // Allow specific origins (localhost for development, Azure for production)
+        corsConfig.setAllowedOrigins(Arrays.asList(
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:3001",
+            "https://ctse-frontend.azurewebsites.net"
+        ));
         
         // Allow specific HTTP methods
         corsConfig.setAllowedMethods(Arrays.asList(
