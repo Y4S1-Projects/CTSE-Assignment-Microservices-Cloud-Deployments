@@ -1,6 +1,15 @@
 version: "3.8"
 
 services:
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - microservices-network
+
   api-gateway:
     build:
       context: ./api-gateway
@@ -31,6 +40,9 @@ services:
       - "8081:8081"
     environment:
       - JWT_SECRET=your-super-secret-key-change-in-production-env
+      - MONGODB_URI=mongodb://mongodb:27017/food_delivery_system
+    depends_on:
+      - mongodb
     networks:
       - microservices-network
     healthcheck:
@@ -108,3 +120,6 @@ services:
 networks:
   microservices-network:
     driver: bridge
+
+volumes:
+  mongodb-data:

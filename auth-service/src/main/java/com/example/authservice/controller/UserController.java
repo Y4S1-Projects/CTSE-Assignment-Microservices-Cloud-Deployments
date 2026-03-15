@@ -63,7 +63,7 @@ public class UserController {
         }
 
         Address saved = addressRepository.save(Address.builder()
-                .user(managedUser)
+                .userId(managedUser.getId())
                 .street(request.getStreet())
                 .city(request.getCity())
                 .postalCode(request.getPostalCode())

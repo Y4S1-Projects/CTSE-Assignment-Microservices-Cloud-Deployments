@@ -65,10 +65,9 @@ A production-ready microservices architecture for a food ordering system built w
          │          │          │          │
          └──────────┴──────────┴──────────┘
                      │
-                ┌────▼────┐
-                │   H2    │
-                │Database │
-                └─────────┘
+             ┌───────────────▼───────────────┐
+             │ MongoDB (food_delivery_system)│
+             └───────────────────────────────┘
 ```
 
 ---
@@ -141,10 +140,10 @@ curl http://localhost:8081/actuator/health
 
 All services are documented with **Swagger (OpenAPI 3.0)**:
 
-| Service          | Swagger UI                                                                     | OpenAPI JSON                                                           |
-| ---------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| **API Gateway**  | [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html) | [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs) |
-| **Auth Service** | [http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html) | [http://localhost:8081/v3/api-docs](http://localhost:8081/v3/api-docs) |
+| Service                              | Swagger UI                                                                     | OpenAPI JSON                                                                     |
+| ------------------------------------ | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| **API Gateway**                      | [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html) | [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)           |
+| **Auth Service (via Gateway route)** | [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html) | [http://localhost:8080/auth/v3/api-docs](http://localhost:8080/auth/v3/api-docs) |
 
 ### How to Use Swagger
 
@@ -157,7 +156,7 @@ All services are documented with **Swagger (OpenAPI 3.0)**:
 
 ```bash
 # Register a new user
-POST http://localhost:8081/auth/register
+POST http://localhost:8080/auth/register
 Content-Type: application/json
 
 {
@@ -168,7 +167,7 @@ Content-Type: application/json
 }
 
 # Login
-POST http://localhost:8081/auth/login
+POST http://localhost:8080/auth/login
 Content-Type: application/json
 
 {
@@ -186,7 +185,7 @@ Content-Type: application/json
 }
 
 # Refresh access token
-POST http://localhost:8081/auth/refresh
+POST http://localhost:8080/auth/refresh
 Content-Type: application/json
 
 {
@@ -194,7 +193,7 @@ Content-Type: application/json
 }
 
 # Validate Token
-POST http://localhost:8081/auth/validate
+POST http://localhost:8080/auth/validate
 Authorization: Bearer <your-jwt-token>
 ```
 
@@ -207,7 +206,7 @@ Authorization: Bearer <your-jwt-token>
 - **Spring Boot 3.x** - Application framework
 - **Spring Cloud Gateway 2024.0.0** - API Gateway
 - **Spring Security** - Authentication & Authorization
-- **Spring Data JPA** - Data persistence
+- **Spring Data MongoDB** - Data persistence
 
 ### Libraries
 
@@ -219,8 +218,8 @@ Authorization: Bearer <your-jwt-token>
 
 ### Database
 
-- **H2 Database** - In-memory database (development)
-- **PostgreSQL** - Production database (planned)
+- **MongoDB** - `food_delivery_system` database
+- Collections auto-created on startup: `users`, `addresses`, `refresh_tokens`, `password_reset_tokens`, `auth_logs`
 
 ### DevOps & Cloud
 
@@ -279,7 +278,7 @@ CTSE-Assignment-Microservices-Cloud-Deployments/
 │   ├── src/main/java/com/example/authservice/
 │   │   ├── entity/           # User entity
 │   │   ├── dto/              # Request/Response DTOs
-│   │   ├── repository/       # JPA repositories
+│   │   ├── repository/       # Mongo repositories
 │   │   ├── service/          # Business logic
 │   │   ├── controller/       # REST controllers
 │   │   ├── config/           # Security, OpenAPI config
@@ -299,14 +298,19 @@ CTSE-Assignment-Microservices-Cloud-Deployments/
 ```bash
 # Required for JWT authentication
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production-min-256-bits
+
+# MongoDB connection string (auth-service)
+MONGODB_URI=mongodb://localhost:27017/food_delivery_system
 ```
 
-#### Database Configuration (Production)
+#### Auth bootstrap users (created if missing)
 
 ```bash
-SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/foodordering
-SPRING_DATASOURCE_USERNAME=dbuser
-SPRING_DATASOURCE_PASSWORD=dbpassword
+# Admin
+ADMIN_PASSWORD=Admin@12345
+
+# Default customer
+CUSTOMER_PASSWORD=Customer@12345
 ```
 
 ### Building the Project
@@ -404,9 +408,11 @@ mvn test
 
 ### Manual API Testing
 
+Use API Gateway URLs for client-side style testing.
+
 ```bash
 # 1. Register a user
-curl -X POST http://localhost:8081/auth/register \
+curl -X POST http://localhost:8080/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "username": "testuser",
@@ -416,7 +422,7 @@ curl -X POST http://localhost:8081/auth/register \
   }'
 
 # 2. Login and get JWT token
-curl -X POST http://localhost:8081/auth/login \
+curl -X POST http://localhost:8080/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -424,14 +430,14 @@ curl -X POST http://localhost:8081/auth/login \
   }'
 
 # 3. Validate token
-curl -X POST http://localhost:8081/auth/validate \
+curl -X POST http://localhost:8080/auth/validate \
   -H "Authorization: Bearer <your-jwt-token>"
 ```
 
 ### Using Swagger UI
 
 1. Start the services
-2. Open Swagger UI: http://localhost:8081/swagger-ui.html
+2. Open Swagger UI: http://localhost:8080/swagger-ui.html
 3. Click "Try it out" on any endpoint
 4. Fill in request body
 5. Click "Execute"
@@ -511,7 +517,7 @@ For issues and questions:
 
 ### 📅 Planned
 
-- [ ] PostgreSQL integration
+- [ ] MongoDB production hardening (indexes, backup, retention)
 - [ ] Service-to-service communication
 - [ ] Distributed tracing
 - [ ] Load testing
