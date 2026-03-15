@@ -21,7 +21,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -30,7 +29,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
-@Transactional
 public class AuthServiceImpl implements AuthService {
 
     @Autowired
@@ -122,7 +120,9 @@ public class AuthServiceImpl implements AuthService {
             throw new InvalidCredentialsException("Refresh token expired");
         }
 
-        return issueTokens(refreshToken.getUser());
+        User refreshUser = userRepository.findById(refreshToken.getUserId())
+                .orElseThrow(() -> new InvalidCredentialsException("User not found"));
+        return issueTokens(refreshUser);
     }
 
     @Override
@@ -152,7 +152,7 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new InvalidCredentialsException("No user found for email"));
 
         PasswordResetToken resetToken = PasswordResetToken.builder()
-                .user(user)
+                .userId(user.getId())
                 .token(UUID.randomUUID().toString())
                 .expiryDate(LocalDateTime.now().plusMinutes(30))
                 .used(false)
@@ -171,7 +171,8 @@ public class AuthServiceImpl implements AuthService {
             throw new InvalidCredentialsException("Reset token expired");
         }
 
-        User user = token.getUser();
+        User user = userRepository.findById(token.getUserId())
+                .orElseThrow(() -> new InvalidCredentialsException("User not found"));
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
         auditService.log(user.getId(), "PASSWORD_CHANGED", resolveRequestIp());
@@ -211,7 +212,7 @@ public class AuthServiceImpl implements AuthService {
 
         String refreshTokenValue = UUID.randomUUID().toString();
         RefreshToken refreshToken = RefreshToken.builder()
-                .user(user)
+                .userId(user.getId())
                 .token(refreshTokenValue)
                 .expiryDate(LocalDateTime.now().plusDays(refreshExpiryDays))
                 .revoked(false)

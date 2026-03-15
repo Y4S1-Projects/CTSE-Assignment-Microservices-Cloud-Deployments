@@ -234,6 +234,7 @@ jobs:
             -GitHubRepo "${{ github.repository }}" `
             -ImageTag "${{ github.sha }}" `
             -JwtSecret "${{ secrets.JWT_SECRET }}" `
+            -MongoDbUri "${{ secrets.MONGODB_URI }}" `
             -GitHubUsername "${{ github.actor }}" `
             -GitHubToken "${{ secrets.GITHUB_TOKEN }}"
 
