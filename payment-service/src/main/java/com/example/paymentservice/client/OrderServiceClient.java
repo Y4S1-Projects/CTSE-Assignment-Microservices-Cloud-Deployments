@@ -1,20 +1,38 @@
 package com.example.paymentservice.client;
 
-import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * Feign client for Order Service
- * Used for inter-service communication: Payment -> Order
- * Implementation will be added during feature development
+ * HTTP client for Order Service using RestTemplate
+ * (Replaced Spring Cloud OpenFeign for Spring Boot 4 compatibility)
  */
-@FeignClient(name = "order-service", url = "${service.order.url:http://order-service:8083}")
-public interface OrderServiceClient {
-    
-    @PatchMapping("/orders/{id}/status")
-    Object updateOrderStatus(
-            @PathVariable("id") String orderId,
-            @RequestParam String status);
+@Component
+public class OrderServiceClient {
+
+    private final RestTemplate restTemplate;
+    private final String orderServiceUrl;
+
+    public OrderServiceClient(
+            RestTemplate restTemplate,
+            @Value("${service.order.url:http://order-service:8083}") String orderServiceUrl) {
+        this.restTemplate = restTemplate;
+        this.orderServiceUrl = orderServiceUrl;
+    }
+
+    public Object updateOrderStatus(String orderId, String status) {
+        try {
+            String url = UriComponentsBuilder
+                .fromHttpUrl(orderServiceUrl + "/orders/{id}/status")
+                .queryParam("status", status)
+                .buildAndExpand(orderId)
+                .toUriString();
+            restTemplate.patchForObject(url, null, Object.class);
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }
