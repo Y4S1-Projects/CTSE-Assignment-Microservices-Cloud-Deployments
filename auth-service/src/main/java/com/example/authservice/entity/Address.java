@@ -2,14 +2,13 @@ package com.example.authservice.entity;
 
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.mongodb.core.index.Indexed;
-import org.springframework.data.mongodb.core.mapping.Document;
+import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
-@Document(collection = "addresses")
+@Entity
+@Table(name = "addresses")
 @Data
 @Builder
 @NoArgsConstructor
@@ -17,9 +16,10 @@ import java.time.LocalDateTime;
 public class Address {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Indexed
+    @Column(nullable = false)
     private String userId;
 
     private String street;

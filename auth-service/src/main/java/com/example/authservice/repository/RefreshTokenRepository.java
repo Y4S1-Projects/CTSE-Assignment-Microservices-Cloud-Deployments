@@ -1,10 +1,13 @@
 package com.example.authservice.repository;
 
 import com.example.authservice.entity.RefreshToken;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
-public interface RefreshTokenRepository extends MongoRepository<RefreshToken, String> {
+
+@Repository
+public interface RefreshTokenRepository extends JpaRepository<RefreshToken, String> {
     Optional<RefreshToken> findByTokenAndRevokedFalse(String token);
 }

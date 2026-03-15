@@ -1,10 +1,12 @@
 package com.example.authservice.repository;
 
 import com.example.authservice.entity.PasswordResetToken;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
-public interface PasswordResetTokenRepository extends MongoRepository<PasswordResetToken, String> {
+@Repository
+public interface PasswordResetTokenRepository extends JpaRepository<PasswordResetToken, String> {
     Optional<PasswordResetToken> findByTokenAndUsedFalse(String token);
 }

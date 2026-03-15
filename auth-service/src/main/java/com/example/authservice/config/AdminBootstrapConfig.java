@@ -7,18 +7,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
-import java.util.List;
 
 @Configuration
 public class AdminBootstrapConfig {
 
     @Bean
-    public CommandLineRunner bootstrapUsersAndCollections(
+    public CommandLineRunner bootstrapAdminAndCustomer(
             UserRepository userRepository,
-            MongoTemplate mongoTemplate,
             PasswordEncoder passwordEncoder,
             @Value("${app.admin.bootstrap.enabled:true}") boolean enabled,
             @Value("${app.admin.bootstrap.username:admin}") String username,
@@ -32,13 +28,6 @@ public class AdminBootstrapConfig {
             @Value("${app.customer.bootstrap.full-name:Default Customer}") String customerFullName
     ) {
         return args -> {
-            List.of("users", "addresses", "refresh_tokens", "password_reset_tokens", "auth_logs")
-                    .forEach(collectionName -> {
-                        if (!mongoTemplate.collectionExists(collectionName)) {
-                            mongoTemplate.createCollection(collectionName);
-                        }
-                    });
-
             if (enabled && userRepository.findByEmail(email).isEmpty() && userRepository.findByUsername(username).isEmpty()) {
                 userRepository.save(User.builder()
                         .username(username)

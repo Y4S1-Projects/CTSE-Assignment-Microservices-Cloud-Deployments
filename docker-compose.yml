@@ -1,15 +1,6 @@
 version: "3.8"
 
 services:
-  mongodb:
-    image: mongo:7
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb-data:/data/db
-    networks:
-      - microservices-network
-
   api-gateway:
     build:
       context: ./api-gateway
@@ -40,9 +31,9 @@ services:
       - "8081:8081"
     environment:
       - JWT_SECRET=your-super-secret-key-change-in-production-env
-      - MONGODB_URI=mongodb://mongodb:27017/food_delivery_system
-    depends_on:
-      - mongodb
+      - DATABASE_URL=jdbc:postgresql://ep-late-paper-a8qs55xj-pooler.eastus2.azure.neon.tech:5432/neondb?sslmode=require&channel_binding=require
+      - DATABASE_USER=neondb_owner
+      - DATABASE_PASSWORD=npg_jCnufk2oOc3Y
     networks:
       - microservices-network
     healthcheck:
@@ -61,6 +52,9 @@ services:
     environment:
       - JWT_SECRET=your-super-secret-key-change-in-production-env
       - SERVICE_AUTH_URL=http://auth-service:8081
+      - DATABASE_URL=jdbc:postgresql://ep-late-paper-a8qs55xj-pooler.eastus2.azure.neon.tech:5432/neondb?sslmode=require&channel_binding=require
+      - DATABASE_USER=neondb_owner
+      - DATABASE_PASSWORD=npg_jCnufk2oOc3Y
     depends_on:
       - auth-service
     networks:
@@ -83,6 +77,9 @@ services:
       - SERVICE_AUTH_URL=http://auth-service:8081
       - SERVICE_CATALOG_URL=http://catalog-service:8082
       - SERVICE_PAYMENT_URL=http://payment-service:8084
+      - DATABASE_URL=jdbc:postgresql://ep-late-paper-a8qs55xj-pooler.eastus2.azure.neon.tech:5432/neondb?sslmode=require&channel_binding=require
+      - DATABASE_USER=neondb_owner
+      - DATABASE_PASSWORD=npg_jCnufk2oOc3Y
     depends_on:
       - auth-service
       - catalog-service
@@ -105,6 +102,9 @@ services:
       - JWT_SECRET=your-super-secret-key-change-in-production-env
       - SERVICE_AUTH_URL=http://auth-service:8081
       - SERVICE_ORDER_URL=http://order-service:8083
+      - DATABASE_URL=jdbc:postgresql://ep-late-paper-a8qs55xj-pooler.eastus2.azure.neon.tech:5432/neondb?sslmode=require&channel_binding=require
+      - DATABASE_USER=neondb_owner
+      - DATABASE_PASSWORD=npg_jCnufk2oOc3Y
     depends_on:
       - auth-service
       - order-service
@@ -120,6 +120,3 @@ services:
 networks:
   microservices-network:
     driver: bridge
-
-volumes:
-  mongodb-data:
