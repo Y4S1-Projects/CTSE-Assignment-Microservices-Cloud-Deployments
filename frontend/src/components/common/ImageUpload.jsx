@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Reusable image upload widget.
@@ -15,17 +15,47 @@ export default function ImageUpload({ value, onChange, label = "Item Image" }) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [cloudConfig, setCloudConfig] = useState({ cloudName: "", uploadPreset: "" });
+
+  useEffect(() => {
+    fetch("/api/cloudinary-config")
+      .then((r) => r.json())
+      .then((d) => setCloudConfig({
+        cloudName: d.cloudinaryCloudName || "",
+        uploadPreset: d.cloudinaryUploadPreset || "",
+      }))
+      .catch(() => {});
+  }, []);
 
   async function uploadFile(file) {
     setUploadError("");
     setUploading(true);
     try {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: form });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
-      onChange(data.url);
+      const { cloudName, uploadPreset } = cloudConfig;
+
+      if (cloudName && uploadPreset) {
+        // Upload directly to Cloudinary (browser → Cloudinary, no server round-trip)
+        const form = new FormData();
+        form.append("file", file);
+        form.append("upload_preset", uploadPreset);
+        form.append("folder", "ctse-catalog");
+
+        const res = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+          { method: "POST", body: form }
+        );
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || "Cloudinary upload failed");
+        onChange(data.secure_url);
+      } else {
+        // Fallback: local upload (dev only — won't persist on Azure)
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch("/api/upload", { method: "POST", body: form });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Upload failed");
+        onChange(data.url);
+      }
     } catch (err) {
       setUploadError(err.message);
     } finally {
