@@ -21,7 +21,7 @@ public class Order {
 
     private BigDecimal totalAmount;
 
-    @Column(columnDefinition = "VARCHAR(50) DEFAULT 'CREATED'")
+    @Column(length = 50)
     private String status;
 
     private LocalDateTime createdAt;
