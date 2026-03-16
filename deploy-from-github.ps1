@@ -196,15 +196,21 @@ function Deploy-Frontend {
         Write-Host "Configured container settings" -ForegroundColor Green
 
         # Set environment variables
+        $appSettings = @(
+            "CLOUDINARY_CLOUD_NAME=dlm0mbm6z",
+            "CLOUDINARY_UPLOAD_PRESET=ugiolco9"
+        )
         if (-not [string]::IsNullOrWhiteSpace($GatewayUrl)) {
-            az webapp config appsettings set `
-                --resource-group $ResourceGroup `
-                --name $webAppName `
-                --settings NEXT_PUBLIC_API_URL=$GatewayUrl NEXT_PUBLIC_API_BASE_URL=$GatewayUrl `
-                --output none
-            
-            Write-Host "Set API Gateway environment variable" -ForegroundColor Green
+            $appSettings += "NEXT_PUBLIC_API_URL=$GatewayUrl"
+            $appSettings += "NEXT_PUBLIC_API_BASE_URL=$GatewayUrl"
         }
+        az webapp config appsettings set `
+            --resource-group $ResourceGroup `
+            --name $webAppName `
+            --settings @appSettings `
+            --output none
+
+        Write-Host "Set App Service environment variables (API URL + Cloudinary)" -ForegroundColor Green
 
         # Restart to pull latest image
         az webapp restart --name $webAppName --resource-group $ResourceGroup --output none
