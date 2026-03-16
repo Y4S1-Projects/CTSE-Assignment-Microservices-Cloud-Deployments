@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+
+// Cloudinary public credentials (unsigned upload preset — safe to hardcode)
+const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "dlm0mbm6z";
+const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "ugiolco9";
 
 /**
  * Reusable image upload widget.
@@ -15,47 +19,24 @@ export default function ImageUpload({ value, onChange, label = "Item Image" }) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [uploadError, setUploadError] = useState("");
-  const [cloudConfig, setCloudConfig] = useState({ cloudName: "", uploadPreset: "" });
-
-  useEffect(() => {
-    fetch("/api/cloudinary-config")
-      .then((r) => r.json())
-      .then((d) => setCloudConfig({
-        cloudName: d.cloudinaryCloudName || "",
-        uploadPreset: d.cloudinaryUploadPreset || "",
-      }))
-      .catch(() => {});
-  }, []);
 
   async function uploadFile(file) {
     setUploadError("");
     setUploading(true);
     try {
-      const { cloudName, uploadPreset } = cloudConfig;
+      // Always upload to Cloudinary (credentials are hardcoded public values)
+      const form = new FormData();
+      form.append("file", file);
+      form.append("upload_preset", UPLOAD_PRESET);
+      form.append("folder", "ctse-catalog");
 
-      if (cloudName && uploadPreset) {
-        // Upload directly to Cloudinary (browser → Cloudinary, no server round-trip)
-        const form = new FormData();
-        form.append("file", file);
-        form.append("upload_preset", uploadPreset);
-        form.append("folder", "ctse-catalog");
-
-        const res = await fetch(
-          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-          { method: "POST", body: form }
-        );
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || "Cloudinary upload failed");
-        onChange(data.secure_url);
-      } else {
-        // Fallback: local upload (dev only — won't persist on Azure)
-        const form = new FormData();
-        form.append("file", file);
-        const res = await fetch("/api/upload", { method: "POST", body: form });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Upload failed");
-        onChange(data.url);
-      }
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+        { method: "POST", body: form }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || "Cloudinary upload failed");
+      onChange(data.secure_url);
     } catch (err) {
       setUploadError(err.message);
     } finally {
