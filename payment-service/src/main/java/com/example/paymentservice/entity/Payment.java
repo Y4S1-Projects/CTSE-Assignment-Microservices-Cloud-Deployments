@@ -35,11 +35,11 @@ public class Payment {
     @Column(nullable = false)
     private String paymentMethod;   // CARD, CASH, ONLINE
 
-    @Column(columnDefinition = "VARCHAR(50) DEFAULT 'PENDING'")
+    @Column(length = 50)
     private String status;          // PENDING, COMPLETED, FAILED
 
     /** True once checkout is confirmed and stock has been decremented */
-    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @Column
     private Boolean isSuccessCheckout;
 
     private String reference;

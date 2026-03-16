@@ -33,7 +33,7 @@ public class MenuItem {
     @Column(nullable = false)
     private Integer stockCount;
 
-    @Column(columnDefinition = "BOOLEAN DEFAULT TRUE")
+    @Column(nullable = false)
     private Boolean available;
 
     private String imageUrl;
