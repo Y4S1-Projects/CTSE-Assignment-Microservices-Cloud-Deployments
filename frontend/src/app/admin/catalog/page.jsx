@@ -15,6 +15,7 @@ import {
 	updateCatalogStock,
 } from "@/lib/foodService";
 import { getAuthToken, isAdminUser } from "@/lib/storage";
+import ImageUpload from "@/components/common/ImageUpload";
 
 function formatPrice(value) {
 	return `$${Number(value || 0).toFixed(2)}`;
@@ -243,6 +244,7 @@ export default function AdminCatalogPage() {
 							<table className='min-w-full text-left text-sm'>
 								<thead>
 									<tr className='border-b border-brand-100 text-brand-800'>
+										<th className='py-2 pr-3'>Image</th>
 										<th className='py-2 pr-3'>Item ID</th>
 										<th className='py-2 pr-3'>Name</th>
 										<th className='py-2 pr-3'>Category</th>
@@ -258,6 +260,15 @@ export default function AdminCatalogPage() {
 											{editingItem === item.id ? (
 												/* ── inline edit row ── */
 												<>
+													<td className='py-2 pr-3'>
+														<div className='w-28'>
+															<ImageUpload
+																label=''
+																value={editForm.imageUrl}
+																onChange={(url) => setEditForm((f) => ({ ...f, imageUrl: url }))}
+															/>
+														</div>
+													</td>
 													<td className='py-2 pr-3 font-mono text-xs text-slate-500'>{item.itemId || "—"}</td>
 													<td className='py-2 pr-3'>
 														<input className='w-32 rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-400'
@@ -291,6 +302,14 @@ export default function AdminCatalogPage() {
 											) : (
 												/* ── view row ── */
 												<>
+													<td className='py-2 pr-3'>
+														{item.imageUrl ? (
+															// eslint-disable-next-line @next/next/no-img-element
+															<img src={item.imageUrl} alt={item.name} className='h-10 w-10 rounded-lg object-cover border border-slate-200' />
+														) : (
+															<div className='flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-400 text-lg'>🖼️</div>
+														)}
+													</td>
 													<td className='py-2 pr-3 font-mono text-xs text-slate-500'>{item.itemId || "—"}</td>
 													<td className='py-2 pr-3 font-medium text-slate-900'>{item.name}</td>
 													<td className='py-2 pr-3 text-slate-600'>{item.category}</td>
@@ -350,8 +369,12 @@ export default function AdminCatalogPage() {
 							onChange={(e) => setItemForm((f) => ({ ...f, stockCount: e.target.value }))} required />
 						<Input label='Description' value={itemForm.description}
 							onChange={(e) => setItemForm((f) => ({ ...f, description: e.target.value }))} />
-						<Input label='Image URL' type='url' placeholder='https://...' value={itemForm.imageUrl}
-							onChange={(e) => setItemForm((f) => ({ ...f, imageUrl: e.target.value }))} />
+						<div className='sm:col-span-2'>
+							<ImageUpload
+								value={itemForm.imageUrl}
+								onChange={(url) => setItemForm((f) => ({ ...f, imageUrl: url }))}
+							/>
+						</div>
 						<Input label='Custom Item ID (optional)' placeholder='e.g. ITEM-0010' value={itemForm.itemId}
 							onChange={(e) => setItemForm((f) => ({ ...f, itemId: e.target.value }))} />
 						<div className='flex items-end sm:col-span-2'>
