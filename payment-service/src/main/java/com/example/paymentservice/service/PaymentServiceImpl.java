@@ -92,6 +92,16 @@ public class PaymentServiceImpl implements PaymentService {
         Payment saved = paymentRepository.save(payment);
         logger.info("Payment {} saved with reference {}", saved.getId(), reference);
 
+        // Update order status (integration point with order-service)
+        if (orderServiceClient != null && saved.getIsSuccessCheckout() && saved.getOrderId() != null && !saved.getOrderId().isBlank()) {
+            try {
+                orderServiceClient.updateOrderStatus(saved.getOrderId(), "PAID");
+                logger.info("Order {} marked as PAID", saved.getOrderId());
+            } catch (Exception e) {
+                logger.warn("Could not update order status for {}: {}", saved.getOrderId(), e.getMessage());
+            }
+        }
+
         // Decrement catalog stock in real-time
         if (catalogServiceClient != null && saved.getIsSuccessCheckout()) {
             Map<String, Object> updatedItem = catalogServiceClient.decrementStock(
