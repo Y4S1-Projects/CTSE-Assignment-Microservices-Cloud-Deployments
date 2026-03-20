@@ -1,4 +1,5 @@
 import Card from "@/components/common/Card";
+import Link from "next/link";
 
 function formatPrice(value) {
 	const numeric = Number(value || 0);
@@ -16,6 +17,7 @@ export default function OrdersTable({ orders, title = "Orders" }) {
 						<thead>
 							<tr className='border-b border-brand-100 text-brand-800'>
 								<th className='py-2 pr-4'>Order ID</th>
+								<th className='py-2 pr-4'>Items</th>
 								<th className='py-2 pr-4'>Status</th>
 								<th className='py-2 pr-4'>Total</th>
 							</tr>
@@ -25,7 +27,14 @@ export default function OrdersTable({ orders, title = "Orders" }) {
 								<tr
 									key={order.id || `${order.userId}-${order.totalAmount}`}
 									className='border-b border-brand-50 text-slate-700'>
-									<td className='py-2 pr-4'>{order.id || "N/A"}</td>
+									<td className='py-2 pr-4'>
+										{order.id ?
+											<Link className='text-brand-700 hover:underline' href={`/customer/orders/${order.id}`}>
+												{order.id}
+											</Link>
+										:	"N/A"}
+									</td>
+									<td className='py-2 pr-4'>{Array.isArray(order.items) ? order.items.length : (order.items || 0)}</td>
 									<td className='py-2 pr-4'>{order.status || "PENDING"}</td>
 									<td className='py-2 pr-4'>{formatPrice(order.totalAmount)}</td>
 								</tr>

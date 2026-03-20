@@ -7,16 +7,14 @@ import Card from "@/components/common/Card";
 import MenuItemCard from "@/components/food/MenuItemCard";
 import CartSummary from "@/components/food/CartSummary";
 import OrdersTable from "@/components/food/OrdersTable";
-import { getMyProfile, logoutUser } from "@/lib/authService";
-import { checkout, getMenuItems, getMyOrders } from "@/lib/foodService";
+import { getMyProfile, logoutUser, validateToken } from "@/lib/authService";
+import { checkout, createOrder, getMenuItems, getMyOrders } from "@/lib/foodService";
 import {
 	clearCart,
 	getAuthToken,
 	getCart,
 	getCurrentUser,
-	getOrderHistory,
 	isAdminUser,
-	pushOrderHistory,
 	saveCart,
 } from "@/lib/storage";
 
@@ -39,7 +37,6 @@ export default function CustomerPage() {
 
 	useEffect(() => {
 		setCart(getCart());
-		setOrders(getOrderHistory());
 	}, []);
 
 	useEffect(() => {
@@ -57,6 +54,11 @@ export default function CustomerPage() {
 
 		async function loadInitial() {
 			try {
+				// If token is stale/invalid, clear it and force re-login.
+				const token = getAuthToken();
+				if (token) {
+					await validateToken(token);
+				}
 				const [profileData, menuData, orderData] = await Promise.all([
 					getMyProfile().catch(() => null),
 					getMenuItems(),
@@ -69,7 +71,11 @@ export default function CustomerPage() {
 					setOrders(orderData);
 				}
 			} catch (loadError) {
-				setError(loadError.message || "Failed to load customer data");
+				const msg = loadError.message || "Failed to load customer data";
+				setError(msg);
+				if (msg.toLowerCase().includes("invalid or expired jwt token") || msg.toLowerCase().includes("missing or invalid authorization")) {
+					router.replace("/auth/login");
+				}
 			}
 		}
 
@@ -126,39 +132,36 @@ export default function CustomerPage() {
 		setSuccess("");
 
 		const userId = profile?.id || "guest";
-		const results = [];
 
 		try {
-			// Process each cart item as a separate payment/checkout record.
-			// This also decrements catalog stock for each item in real-time.
-			for (const cartItem of cart) {
-				const itemTotal = Number(cartItem.price || 0) * cartItem.quantity;
-				const result = await checkout({
-					itemId: cartItem.itemId || cartItem.id,   // use business itemId
+			// 1) Create an order in order-service (validates items with catalog-service)
+			const created = await createOrder(cart);
+
+			// 2) Pay each line item (payment-service decrements stock and marks order as PAID)
+			for (const orderItem of created?.items || []) {
+				await checkout({
+					itemId: orderItem.itemId || orderItem.catalogItemId,
+					orderId: created.id,
 					userId,
-					quantity: cartItem.quantity,
-					amount: itemTotal,
+					quantity: orderItem.quantity,
+					amount: orderItem.lineTotal,
 					paymentMethod: "CARD",
 				});
-				results.push(result);
 			}
 
-			const totalAmount = cart.reduce((sum, item) => sum + Number(item.price || 0) * item.quantity, 0);
-			const completedOrder = {
-				id: results[0]?.id || `local-${Date.now()}`,
-				userId,
-				totalAmount,
-				status: "PAID",
-				items: cart.length,
-			};
-			pushOrderHistory(completedOrder);
-			setOrders([completedOrder, ...orders]);
+			// Refresh server-side order list
+			const refreshedOrders = await getMyOrders().catch(() => []);
+			if (refreshedOrders.length > 0) {
+				setOrders(refreshedOrders);
+			} else {
+				setOrders([created, ...orders]);
+			}
 			clearCart();
 			setCart([]);
 			// Refresh catalog items to show updated stock counts
 			const refreshed = await getMenuItems();
 			setMenuItems(refreshed);
-			setSuccess(`Checkout successful! ${cart.length} item(s) ordered. Stock updated in real-time.`);
+			setSuccess(`Checkout successful! Order ${created?.id || ""} paid. Stock updated in real-time.`);
 		} catch (checkoutError) {
 			setError(checkoutError.message || "Failed to complete checkout");
 		} finally {

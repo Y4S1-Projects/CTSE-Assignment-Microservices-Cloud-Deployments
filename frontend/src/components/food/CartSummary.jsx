@@ -44,7 +44,7 @@ export default function CartSummary({ items, onChangeQty, onRemove, onCheckout, 
 				<p className='text-xl font-bold text-brand-700'>{formatPrice(subtotal)}</p>
 			</div>
 			<Button className='w-full' disabled={items.length === 0 || loading} onClick={onCheckout}>
-				{loading ? "Processing order..." : "Place Order & Pay"}
+				{loading ? "Processing order..." : "Place Order"}
 			</Button>
 		</Card>
 	);
