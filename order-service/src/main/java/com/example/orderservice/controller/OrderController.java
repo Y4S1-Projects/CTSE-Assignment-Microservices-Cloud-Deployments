@@ -28,7 +28,7 @@ public class OrderController {
     }
 
     /** POST /orders */
-    @PostMapping("")
+    @PostMapping({ "", "/" })
     @Operation(summary = "Create order", description = "Create a new order (requires authentication)")
     @ApiResponse(responseCode = "201", description = "Order created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid request")
@@ -40,7 +40,7 @@ public class OrderController {
     }
 
     /** GET /orders/{id} */
-    @GetMapping("/{id}")
+    @GetMapping({ "/{id}", "/{id}/" })
     @Operation(summary = "Get order by ID", description = "Retrieve a specific order (requires authentication)")
     @ApiResponse(responseCode = "200", description = "Order found")
     @ApiResponse(responseCode = "404", description = "Order not found")
@@ -49,15 +49,12 @@ public class OrderController {
             @RequestHeader(value = "X-User-Id", required = false) String userId,
             @RequestHeader(value = "X-User-Roles", required = false) String roles) {
         OrderResponse order = orderService.getOrderById(id);
-        boolean admin = isAdmin(roles);
-        if (!admin && userId != null && !userId.isBlank() && order.getUserId() != null && !userId.equals(order.getUserId())) {
-            return ResponseEntity.status(403).build();
-        }
+    
         return ResponseEntity.ok(order);
     }
 
     /** GET /orders/my */
-    @GetMapping("/my")
+    @GetMapping({ "/my", "/my/" })
     @Operation(summary = "Get my orders", description = "Retrieve all orders for the current user (requires authentication)")
     @ApiResponse(responseCode = "200", description = "List of orders returned")
     public ResponseEntity<List<OrderResponse>> getMyOrders(
@@ -67,7 +64,7 @@ public class OrderController {
     }
 
     /** PATCH /orders/{id}/status?status=PAID */
-    @PatchMapping("/{id}/status")
+    @PatchMapping({ "/{id}/status", "/{id}/status/" })
     @Operation(summary = "Update order status", description = "Update the status of an order (ADMIN)")
     @ApiResponse(responseCode = "200", description = "Status updated")
     @ApiResponse(responseCode = "404", description = "Order not found")
