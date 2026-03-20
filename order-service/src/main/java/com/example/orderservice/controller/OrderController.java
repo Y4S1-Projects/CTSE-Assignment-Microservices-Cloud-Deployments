@@ -13,10 +13,7 @@ import jakarta.validation.Valid;
 
 import java.util.List;
 
-/**
- * OrderController - Placeholder implementation
- * Details will be implemented during feature development
- */
+
 @RestController
 @Tag(name = "Orders", description = "Order management endpoints")
 public class OrderController {
