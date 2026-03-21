@@ -39,9 +39,7 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/register",
                     "/login",
-                    "/validate",
                     "/refresh",
-                    "/logout",
                     "/forgot-password",
                     "/reset-password",
                     "/health",
@@ -54,6 +52,10 @@ public class SecurityConfig {
             )
             .headers(headers -> headers
                 .frameOptions(frame -> frame.disable())
+            )
+            .exceptionHandling(exception -> exception
+                .authenticationEntryPoint((request, response, authException) ->
+                    response.sendError(401, "Unauthorized"))
             )
             .logout(AbstractHttpConfigurer::disable);
 

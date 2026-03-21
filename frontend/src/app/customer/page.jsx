@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Button from "@/components/common/Button";
 import Card from "@/components/common/Card";
 import MenuItemCard from "@/components/food/MenuItemCard";
@@ -9,14 +10,7 @@ import CartSummary from "@/components/food/CartSummary";
 import OrdersTable from "@/components/food/OrdersTable";
 import { getMyProfile, logoutUser, validateToken } from "@/lib/authService";
 import { checkout, createOrder, getMenuItems, getMyOrders } from "@/lib/foodService";
-import {
-	clearCart,
-	getAuthToken,
-	getCart,
-	getCurrentUser,
-	isAdminUser,
-	saveCart,
-} from "@/lib/storage";
+import { clearCart, getAuthToken, getCart, getCurrentUser, isAdminUser, saveCart } from "@/lib/storage";
 
 function formatPrice(value) {
 	const numeric = Number(value || 0);
@@ -73,7 +67,10 @@ export default function CustomerPage() {
 			} catch (loadError) {
 				const msg = loadError.message || "Failed to load customer data";
 				setError(msg);
-				if (msg.toLowerCase().includes("invalid or expired jwt token") || msg.toLowerCase().includes("missing or invalid authorization")) {
+				if (
+					msg.toLowerCase().includes("invalid or expired jwt token") ||
+					msg.toLowerCase().includes("missing or invalid authorization")
+				) {
 					router.replace("/auth/login");
 				}
 			}
@@ -188,9 +185,14 @@ export default function CustomerPage() {
 				<div className='flex flex-wrap items-center justify-between gap-3'>
 					<div>
 						<h1 className='text-2xl font-bold text-slate-900'>Food Ordering Dashboard</h1>
-						<p className='text-sm text-slate-600'>Welcome {profile?.fullName || profile?.username || "Customer"}</p>
+						<p className='text-sm text-slate-600'>Welcome {profile?.fullName || profile?.email || "Customer"}</p>
 					</div>
-					<Button onClick={handleLogout}>Logout</Button>
+					<div className='flex items-center gap-2'>
+						<Link href='/profile'>
+							<Button variant='secondary'>Profile</Button>
+						</Link>
+						<Button onClick={handleLogout}>Logout</Button>
+					</div>
 				</div>
 				{error ?
 					<p className='text-sm text-red-600'>{error}</p>
@@ -246,9 +248,7 @@ export default function CustomerPage() {
 						<p className='mt-2 text-sm text-slate-600'>
 							Total payable: {formatPrice(cart.reduce((sum, item) => sum + Number(item.price || 0) * item.quantity, 0))}
 						</p>
-						<p className='mt-1 text-xs text-slate-500'>
-							Checkout deducts real-time stock from the catalog inventory.
-						</p>
+						<p className='mt-1 text-xs text-slate-500'>Checkout deducts real-time stock from the catalog inventory.</p>
 					</Card>
 				</div>
 			</section>

@@ -18,10 +18,10 @@ public class User {
     private String id;
 
     @Column(unique = true, nullable = false)
-    private String username;
+    private String email;
 
     @Column(unique = true, nullable = false)
-    private String email;
+    private String username;
 
     private String passwordHash;
 
@@ -36,4 +36,12 @@ public class User {
     private LocalDateTime updatedAt;
 
     private boolean active;
+
+    @PrePersist
+    @PreUpdate
+    private void ensureLegacyUsername() {
+        if ((username == null || username.isBlank()) && email != null && !email.isBlank()) {
+            username = email;
+        }
+    }
 }

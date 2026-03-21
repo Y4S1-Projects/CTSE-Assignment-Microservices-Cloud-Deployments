@@ -1,4 +1,4 @@
-import { clearAuthSession, getAuthToken } from "@/lib/storage";
+import { clearAuthSession, getAuthToken, getCurrentUser, getRefreshToken, saveAuthSession } from "@/lib/storage";
 
 let cachedGatewayBase = null;
 let gatewayBasePromise = null;
@@ -68,6 +68,10 @@ async function resolveGatewayBase() {
 
 export async function apiRequest(path, options = {}) {
 	const gatewayBase = await resolveGatewayBase();
+	return performRequest(gatewayBase, path, options, true);
+}
+
+async function performRequest(gatewayBase, path, options = {}, canRetryAuth = true) {
 	const token = getAuthToken();
 	const headers = {
 		"Content-Type": "application/json",
@@ -82,7 +86,7 @@ export async function apiRequest(path, options = {}) {
 			headers,
 			cache: "no-store",
 		});
-	} catch (e) {
+	} catch {
 		throw new Error("Failed to fetch");
 	}
 
@@ -94,14 +98,70 @@ export async function apiRequest(path, options = {}) {
 		payload = null;
 	}
 
-	if (!response.ok) {
-		// If the token is invalid/expired, clear session so the app can re-login cleanly.
-		if (response.status === 401) {
-			clearAuthSession();
+	const isAuthLifecycleCall = ["/auth/login", "/auth/register", "/auth/refresh"].includes(path);
+	if (response.status === 401 && canRetryAuth && !isAuthLifecycleCall) {
+		const refreshed = await tryRefreshAccessToken(gatewayBase);
+		if (refreshed) {
+			return performRequest(gatewayBase, path, options, false);
 		}
+	}
+
+	if (!response.ok) {
 		const message = payload?.message || payload?.error || "Request failed";
-		throw new Error(message);
+		const error = new Error(message);
+		error.status = response.status;
+		error.payload = payload;
+		error.path = path;
+
+		throw error;
 	}
 
 	return payload ?? {};
+}
+
+async function tryRefreshAccessToken(gatewayBase) {
+	const refreshToken = getRefreshToken();
+	if (!refreshToken) {
+		return false;
+	}
+
+	try {
+		const response = await fetch(`${gatewayBase}/auth/refresh`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ refreshToken }),
+			cache: "no-store",
+		});
+
+		if (!response.ok) {
+			clearAuthSession();
+			return false;
+		}
+
+		const data = await response.json();
+		const nextToken = data?.token || data?.accessToken;
+		if (!nextToken) {
+			clearAuthSession();
+			return false;
+		}
+
+		const currentUser = getCurrentUser();
+		saveAuthSession({
+			token: nextToken,
+			refreshToken: data?.refreshToken || refreshToken,
+			user: {
+				userId: data?.userId || currentUser?.userId || currentUser?.id,
+				id: data?.userId || currentUser?.id || currentUser?.userId,
+				email: data?.email || currentUser?.email,
+				role: data?.role || currentUser?.role,
+			},
+		});
+
+		return true;
+	} catch {
+		clearAuthSession();
+		return false;
+	}
 }
