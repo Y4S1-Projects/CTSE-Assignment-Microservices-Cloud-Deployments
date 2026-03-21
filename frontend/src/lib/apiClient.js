@@ -113,10 +113,6 @@ async function performRequest(gatewayBase, path, options = {}, canRetryAuth = tr
 		error.payload = payload;
 		error.path = path;
 
-		if (response.status === 401 && !isAuthLifecycleCall) {
-			clearAuthSession();
-		}
-
 		throw error;
 	}
 

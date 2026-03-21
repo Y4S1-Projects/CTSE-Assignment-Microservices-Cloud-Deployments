@@ -17,6 +17,7 @@ public interface AuthService {
     LoginResponse register(RegisterRequest request);
     LoginResponse refresh(RefreshRequest request);
     void logout(RefreshRequest request);
+    void logout(String email, RefreshRequest request);
     void changePassword(String email, ChangePasswordRequest request);
     String forgotPassword(ForgotPasswordRequest request);
     void resetPassword(ResetPasswordRequest request);

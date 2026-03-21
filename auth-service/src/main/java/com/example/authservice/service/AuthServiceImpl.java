@@ -124,6 +124,21 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    public void logout(String email, RefreshRequest request) {
+        User currentUser = getUserByEmail(email);
+
+        RefreshToken refreshToken = refreshTokenRepository.findByTokenAndRevokedFalse(request.getRefreshToken())
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid refresh token"));
+
+        if (!currentUser.getId().equals(refreshToken.getUserId())) {
+            throw new InvalidCredentialsException("Session does not match refresh token");
+        }
+
+        refreshToken.setRevoked(true);
+        refreshTokenRepository.save(refreshToken);
+    }
+
+    @Override
     public void changePassword(String email, ChangePasswordRequest request) {
         User user = getUserByEmail(email);
 

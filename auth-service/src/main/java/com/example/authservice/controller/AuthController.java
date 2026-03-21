@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -84,8 +83,8 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, String>> logout(@RequestBody RefreshRequest request) {
-        authService.logout(request);
+    public ResponseEntity<Map<String, String>> logout(Authentication authentication, @RequestBody RefreshRequest request) {
+        authService.logout(authentication.getName(), request);
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 
@@ -116,28 +115,16 @@ public class AuthController {
         @ApiResponse(responseCode = "200", description = "Token is valid"),
         @ApiResponse(responseCode = "401", description = "Token is invalid or expired")
     })
-    public ResponseEntity<Map<String, Object>> validateToken(@RequestHeader(value = "Authorization", required = false) String authHeader) {
-        logger.debug("Token validation request received");
-        
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("valid", false, "message", "Invalid authorization header"));
-        }
+    public ResponseEntity<Map<String, Object>> validateToken(Authentication authentication) {
+        logger.debug("Session validation request received for {}", authentication.getName());
 
-        String token = authHeader.substring(7);
-        boolean isValid = authService.validateToken(token);
-
-        if (isValid) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("valid", true);
-            response.put("userId", authService.extractUserId(token));
-            response.put("email", authService.extractEmail(token));
-            response.put("role", authService.extractRole(token));
-            return ResponseEntity.ok(response);
-        } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("valid", false, "message", "Invalid or expired token"));
-        }
+        var user = authService.getUserByEmail(authentication.getName());
+        Map<String, Object> response = new HashMap<>();
+        response.put("valid", true);
+        response.put("userId", user.getId());
+        response.put("email", user.getEmail());
+        response.put("role", user.getRole());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/health")

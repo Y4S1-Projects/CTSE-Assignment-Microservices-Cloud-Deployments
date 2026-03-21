@@ -1,5 +1,15 @@
 import { apiRequest } from "@/lib/apiClient";
-import { clearAuthSession, getRefreshToken, saveAuthSession } from "@/lib/storage";
+import { clearAuthSession, getAuthToken, getRefreshToken, saveAuthSession } from "@/lib/storage";
+
+function ensureSession() {
+	const token = getAuthToken();
+	if (!token) {
+		const error = new Error("Unauthorized: active session required");
+		error.status = 401;
+		throw error;
+	}
+	return token;
+}
 
 export async function registerUser(formData) {
 	const payload = {
@@ -46,9 +56,10 @@ export async function loginUser(credentials) {
 }
 
 export async function validateToken(token) {
+	const sessionToken = token || ensureSession();
 	return apiRequest("/auth/validate", {
 		method: "POST",
-		headers: token ? { Authorization: `Bearer ${token}` } : {},
+		headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {},
 	});
 }
 
@@ -61,6 +72,7 @@ export async function refreshToken() {
 }
 
 export async function logoutUser() {
+	ensureSession();
 	const refresh = getRefreshToken();
 	try {
 		await apiRequest("/auth/logout", {
@@ -73,12 +85,14 @@ export async function logoutUser() {
 }
 
 export async function getMyProfile() {
+	ensureSession();
 	return apiRequest("/auth/users/me", {
 		method: "GET",
 	});
 }
 
 export async function updateMyProfile(payload) {
+	ensureSession();
 	return apiRequest("/auth/users/profile", {
 		method: "PUT",
 		body: JSON.stringify(payload),
@@ -86,14 +100,24 @@ export async function updateMyProfile(payload) {
 }
 
 export async function getAllUsers() {
-	return apiRequest("/admin/users", {
+	ensureSession();
+	return apiRequest("/auth/admin/users", {
 		method: "GET",
 	});
 }
 
 export async function updateUserStatus(id, active) {
-	return apiRequest(`/admin/users/${id}/status`, {
+	ensureSession();
+	return apiRequest(`/auth/admin/users/${id}/status`, {
 		method: "PATCH",
 		body: JSON.stringify({ active }),
+	});
+}
+
+export async function updateUserDetails(id, payload) {
+	ensureSession();
+	return apiRequest(`/auth/admin/users/${id}`, {
+		method: "PUT",
+		body: JSON.stringify(payload),
 	});
 }
