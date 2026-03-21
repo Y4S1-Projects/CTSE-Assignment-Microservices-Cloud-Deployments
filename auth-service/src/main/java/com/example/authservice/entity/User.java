@@ -20,6 +20,9 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
+    @Column(unique = true, nullable = false)
+    private String username;
+
     private String passwordHash;
 
     private String fullName;
@@ -33,4 +36,12 @@ public class User {
     private LocalDateTime updatedAt;
 
     private boolean active;
+
+    @PrePersist
+    @PreUpdate
+    private void ensureLegacyUsername() {
+        if ((username == null || username.isBlank()) && email != null && !email.isBlank()) {
+            username = email;
+        }
+    }
 }

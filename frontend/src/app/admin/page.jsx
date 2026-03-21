@@ -6,7 +6,7 @@ import Link from "next/link";
 import Button from "@/components/common/Button";
 import Card from "@/components/common/Card";
 import Input from "@/components/common/Input";
-import { getAllUsers, logoutUser, updateUserStatus } from "@/lib/authService";
+import { getAllUsers, logoutUser, updateUserDetails, updateUserStatus } from "@/lib/authService";
 import {
 	createCatalogItem,
 	deleteCatalogItem,
@@ -49,12 +49,20 @@ export default function AdminPage() {
 	const [savingItem, setSavingItem] = useState(false);
 	// Inline stock edit
 	const [editingStock, setEditingStock] = useState({}); // { [id]: newStockValue }
+	const [editingUserId, setEditingUserId] = useState(null);
+	const [userEditForm, setUserEditForm] = useState({
+		fullName: "",
+		email: "",
+		role: "CUSTOMER",
+		active: true,
+	});
+	const [savingUser, setSavingUser] = useState(false);
 
 	async function loadData() {
 		setError("");
 		try {
 			const [usersData, menuData, ordersData, dashData] = await Promise.all([
-				getAllUsers().catch(() => []),
+				getAllUsers(),
 				getMenuItems(),
 				getAllOrders().catch(() => []),
 				getCatalogDashboard().catch(() => null),
@@ -90,6 +98,50 @@ export default function AdminPage() {
 			await loadData();
 		} catch (err) {
 			setError(err.message || "Failed to update user status");
+		}
+	}
+
+	function startEditUser(user) {
+		setEditingUserId(user.id);
+		setUserEditForm({
+			fullName: user.fullName || "",
+			email: user.email || "",
+			role: user.role || "CUSTOMER",
+			active: Boolean(user.active),
+		});
+	}
+
+	function cancelEditUser() {
+		setEditingUserId(null);
+		setUserEditForm({
+			fullName: "",
+			email: "",
+			role: "CUSTOMER",
+			active: true,
+		});
+	}
+
+	async function handleSaveUser(event) {
+		event.preventDefault();
+		if (!editingUserId) return;
+
+		setError("");
+		setSuccess("");
+		setSavingUser(true);
+		try {
+			await updateUserDetails(editingUserId, {
+				fullName: userEditForm.fullName,
+				email: userEditForm.email,
+				role: userEditForm.role,
+				active: userEditForm.active,
+			});
+			setSuccess("User updated successfully.");
+			cancelEditUser();
+			await loadData();
+		} catch (err) {
+			setError(err.message || "Failed to update user");
+		} finally {
+			setSavingUser(false);
 		}
 	}
 
@@ -169,7 +221,7 @@ export default function AdminPage() {
 
 	if (!authorized) {
 		return (
-			<Card className='mx-auto mt-10 max-w-xl'>
+			<Card className='max-w-xl mx-auto mt-10'>
 				<p className='text-sm text-slate-600'>Checking admin access...</p>
 			</Card>
 		);
@@ -237,7 +289,7 @@ export default function AdminPage() {
 							<Card className='space-y-3'>
 								<h2 className='text-lg font-semibold text-slate-900'>Category Breakdown</h2>
 								<div className='overflow-x-auto'>
-									<table className='min-w-full text-left text-sm'>
+									<table className='min-w-full text-sm text-left'>
 										<thead>
 											<tr className='border-b border-brand-100 text-brand-800'>
 												<th className='py-2 pr-6'>Category</th>
@@ -273,7 +325,7 @@ export default function AdminPage() {
 				</div>
 				<Link
 					href='/admin/catalog'
-					className='rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition whitespace-nowrap'>
+					className='px-4 py-2 text-sm font-semibold text-white transition rounded-xl bg-brand-600 hover:bg-brand-700 whitespace-nowrap'>
 					Go to Catalog →
 				</Link>
 			</Card>
@@ -291,7 +343,7 @@ export default function AdminPage() {
 						{orders.length === 0 ?
 							<p className='text-sm text-slate-500'>No orders yet.</p>
 						:	<div className='overflow-x-auto'>
-								<table className='min-w-full text-left text-sm'>
+								<table className='min-w-full text-sm text-left'>
 									<thead>
 										<tr className='border-b border-brand-100 text-brand-800'>
 											<th className='py-2 pr-4'>Reference</th>
@@ -373,23 +425,72 @@ export default function AdminPage() {
 			{activeTab === "users" && (
 				<Card className='space-y-4'>
 					<h2 className='text-lg font-semibold text-brand-800'>Users</h2>
+					{editingUserId ?
+						<form
+							onSubmit={handleSaveUser}
+							className='grid gap-3 p-4 border rounded-xl border-brand-100 sm:grid-cols-2'>
+							<Input
+								label='Full Name'
+								value={userEditForm.fullName}
+								onChange={(event) => setUserEditForm((prev) => ({ ...prev, fullName: event.target.value }))}
+							/>
+							<Input
+								label='Email'
+								type='email'
+								value={userEditForm.email}
+								onChange={(event) => setUserEditForm((prev) => ({ ...prev, email: event.target.value }))}
+								required
+							/>
+							<label className='block space-y-1.5'>
+								<span className='text-sm font-medium text-slate-700'>Role</span>
+								<select
+									value={userEditForm.role}
+									onChange={(event) => setUserEditForm((prev) => ({ ...prev, role: event.target.value }))}
+									className='w-full rounded-xl border border-brand-200 bg-white px-3.5 py-2.5 text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200'>
+									<option value='CUSTOMER'>CUSTOMER</option>
+									<option value='ADMIN'>ADMIN</option>
+								</select>
+							</label>
+							<label className='flex items-center gap-2 text-sm text-slate-700 sm:pt-8'>
+								<input
+									type='checkbox'
+									checked={userEditForm.active}
+									onChange={(event) => setUserEditForm((prev) => ({ ...prev, active: event.target.checked }))}
+								/>
+								Active user
+							</label>
+							<div className='flex gap-2 sm:col-span-2'>
+								<Button type='submit' disabled={savingUser}>
+									{savingUser ? "Saving..." : "Save User"}
+								</Button>
+								<Button type='button' variant='secondary' onClick={cancelEditUser}>
+									Cancel
+								</Button>
+							</div>
+						</form>
+					:	null}
 					<div className='overflow-x-auto'>
-						<table className='min-w-full text-left text-sm'>
+						<table className='min-w-full text-sm text-left'>
 							<thead>
 								<tr className='border-b border-brand-100 text-brand-800'>
+									<th className='py-2 pr-4'>Full Name</th>
 									<th className='py-2 pr-4'>Email</th>
 									<th className='py-2 pr-4'>Role</th>
 									<th className='py-2 pr-4'>Active</th>
-									<th className='py-2 pr-4'>Action</th>
+									<th className='py-2 pr-4'>Actions</th>
 								</tr>
 							</thead>
 							<tbody>
 								{users.map((user) => (
 									<tr key={user.id || user.email} className='border-b border-brand-50 text-slate-700'>
+										<td className='py-2 pr-4'>{user.fullName || "-"}</td>
 										<td className='py-2 pr-4'>{user.email}</td>
 										<td className='py-2 pr-4'>{user.role}</td>
 										<td className='py-2 pr-4'>{user.active ? "Yes" : "No"}</td>
-										<td className='py-2 pr-4'>
+										<td className='flex gap-2 py-2 pr-4'>
+											<Button variant='secondary' onClick={() => startEditUser(user)}>
+												Edit
+											</Button>
 											<Button variant='secondary' onClick={() => handleToggleUser(user)}>
 												{user.active ? "Deactivate" : "Activate"}
 											</Button>

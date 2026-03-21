@@ -1,6 +1,7 @@
 package com.example.authservice.controller;
 
 import com.example.authservice.dto.AdminCreateUserRequest;
+import com.example.authservice.dto.AdminUpdateUserRequest;
 import com.example.authservice.dto.UpdateUserStatusRequest;
 import com.example.authservice.dto.UserProfileResponse;
 import com.example.authservice.entity.Role;
@@ -57,6 +58,34 @@ public class AdminController {
     public ResponseEntity<UserProfileResponse> updateStatus(@PathVariable String id, @RequestBody UpdateUserStatusRequest request) {
         User user = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
         user.setActive(request.isActive());
+        return ResponseEntity.ok(toProfile(userRepository.save(user)));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<UserProfileResponse> updateUser(@PathVariable String id, @RequestBody AdminUpdateUserRequest request) {
+        User user = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+            userRepository.findByEmail(request.getEmail())
+                    .filter(existing -> !existing.getId().equals(user.getId()))
+                    .ifPresent(existing -> {
+                        throw new IllegalArgumentException("Email already in use");
+                    });
+            user.setEmail(request.getEmail());
+        }
+
+        if (request.getFullName() != null && !request.getFullName().isBlank()) {
+            user.setFullName(request.getFullName());
+        }
+
+        if (request.getRole() != null) {
+            user.setRole(request.getRole());
+        }
+
+        if (request.getActive() != null) {
+            user.setActive(request.getActive());
+        }
+
         return ResponseEntity.ok(toProfile(userRepository.save(user)));
     }
 

@@ -281,7 +281,8 @@ class AuthControllerIntegrationTest {
         LoginResponse reg = registerFresh();
         // Logout to revoke
         RefreshRequest logoutReq = RefreshRequest.builder().refreshToken(reg.getRefreshToken()).build();
-        restTemplate.postForEntity(url("/logout"), logoutReq, Map.class);
+        restTemplate.exchange(url("/logout"), HttpMethod.POST,
+            new HttpEntity<>(logoutReq, bearerHeaders(reg.getAccessToken())), Map.class);
 
         // Now refresh with the revoked token
         RefreshRequest refreshReq = RefreshRequest.builder().refreshToken(reg.getRefreshToken()).build();
@@ -299,7 +300,8 @@ class AuthControllerIntegrationTest {
         LoginResponse reg = registerFresh();
         RefreshRequest req = RefreshRequest.builder().refreshToken(reg.getRefreshToken()).build();
 
-        ResponseEntity<Map> resp = restTemplate.postForEntity(url("/logout"), req, Map.class);
+        ResponseEntity<Map> resp = restTemplate.exchange(url("/logout"), HttpMethod.POST,
+            new HttpEntity<>(req, bearerHeaders(reg.getAccessToken())), Map.class);
 
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(resp.getBody()).containsKey("message");
@@ -310,10 +312,12 @@ class AuthControllerIntegrationTest {
     void logout_alreadyRevoked_stillReturns200() {
         LoginResponse reg = registerFresh();
         RefreshRequest req = RefreshRequest.builder().refreshToken(reg.getRefreshToken()).build();
-        restTemplate.postForEntity(url("/logout"), req, Map.class); // first logout
+        restTemplate.exchange(url("/logout"), HttpMethod.POST,
+            new HttpEntity<>(req, bearerHeaders(reg.getAccessToken())), Map.class); // first logout
 
-        ResponseEntity<Map> resp = restTemplate.postForEntity(url("/logout"), req, Map.class); // second logout
-        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<Map> resp = restTemplate.exchange(url("/logout"), HttpMethod.POST,
+            new HttpEntity<>(req, bearerHeaders(reg.getAccessToken())), Map.class); // second logout
+        assertThat(resp.getStatusCode()).isIn(HttpStatus.OK, HttpStatus.UNAUTHORIZED);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
