@@ -28,21 +28,21 @@ class JwtTokenProviderTest {
 
     @Test
     void generateToken_returnsNonNullNonBlankString() {
-        String token = jwtTokenProvider.generateToken("user-1", "alice", "CUSTOMER");
+        String token = jwtTokenProvider.generateToken("user-1", "alice@example.com", "CUSTOMER");
         assertThat(token).isNotNull().isNotBlank();
     }
 
     @Test
     void generateToken_differentUsers_produceDifferentTokens() {
-        String t1 = jwtTokenProvider.generateToken("user-1", "alice", "CUSTOMER");
-        String t2 = jwtTokenProvider.generateToken("user-2", "bob", "ADMIN");
+        String t1 = jwtTokenProvider.generateToken("user-1", "alice@example.com", "CUSTOMER");
+        String t2 = jwtTokenProvider.generateToken("user-2", "bob@example.com", "ADMIN");
         assertThat(t1).isNotEqualTo(t2);
     }
 
     @Test
     void generateToken_sameUser_differentRoles_differentTokens() {
-        String t1 = jwtTokenProvider.generateToken("user-1", "alice", "CUSTOMER");
-        String t2 = jwtTokenProvider.generateToken("user-1", "alice", "ADMIN");
+        String t1 = jwtTokenProvider.generateToken("user-1", "alice@example.com", "CUSTOMER");
+        String t2 = jwtTokenProvider.generateToken("user-1", "alice@example.com", "ADMIN");
         assertThat(t1).isNotEqualTo(t2);
     }
 
@@ -50,7 +50,7 @@ class JwtTokenProviderTest {
 
     @Test
     void validateToken_freshToken_returnsTrue() {
-        String token = jwtTokenProvider.generateToken("user-1", "alice", "CUSTOMER");
+        String token = jwtTokenProvider.generateToken("user-1", "alice@example.com", "CUSTOMER");
         assertThat(jwtTokenProvider.validateToken(token)).isTrue();
     }
 
@@ -71,7 +71,7 @@ class JwtTokenProviderTest {
 
     @Test
     void validateToken_tamperedSignature_returnsFalse() {
-        String token = jwtTokenProvider.generateToken("user-1", "alice", "CUSTOMER");
+        String token = jwtTokenProvider.generateToken("user-1", "alice@example.com", "CUSTOMER");
         // Replace last char to corrupt the signature
         String tampered = token.substring(0, token.length() - 1) + (token.endsWith("A") ? "B" : "A");
         assertThat(jwtTokenProvider.validateToken(tampered)).isFalse();
@@ -80,30 +80,30 @@ class JwtTokenProviderTest {
     @Test
     void validateToken_expiredToken_returnsFalse() throws InterruptedException {
         ReflectionTestUtils.setField(jwtTokenProvider, "jwtExpiration", 1L); // 1 ms
-        String token = jwtTokenProvider.generateToken("user-1", "alice", "CUSTOMER");
+        String token = jwtTokenProvider.generateToken("user-1", "alice@example.com", "CUSTOMER");
         Thread.sleep(50); // ensure expiry
         assertThat(jwtTokenProvider.validateToken(token)).isFalse();
     }
 
-    // ── extractUsername ────────────────────────────────────────────────────────
+    // ── extractEmail ───────────────────────────────────────────────────────────
 
     @Test
-    void extractUsername_returnsCorrectValue() {
-        String token = jwtTokenProvider.generateToken("user-1", "alice", "CUSTOMER");
-        assertThat(jwtTokenProvider.extractUsername(token)).isEqualTo("alice");
+    void extractEmail_returnsCorrectValue() {
+        String token = jwtTokenProvider.generateToken("user-1", "alice@example.com", "CUSTOMER");
+        assertThat(jwtTokenProvider.extractEmail(token)).isEqualTo("alice@example.com");
     }
 
     @Test
-    void extractUsername_adminUser_returnsAdminUsername() {
-        String token = jwtTokenProvider.generateToken("admin-1", "admin", "ADMIN");
-        assertThat(jwtTokenProvider.extractUsername(token)).isEqualTo("admin");
+    void extractEmail_adminUser_returnsAdminEmail() {
+        String token = jwtTokenProvider.generateToken("admin-1", "admin@local.test", "ADMIN");
+        assertThat(jwtTokenProvider.extractEmail(token)).isEqualTo("admin@local.test");
     }
 
     // ── extractUserId ──────────────────────────────────────────────────────────
 
     @Test
     void extractUserId_returnsCorrectValue() {
-        String token = jwtTokenProvider.generateToken("user-abc-123", "alice", "CUSTOMER");
+        String token = jwtTokenProvider.generateToken("user-abc-123", "alice@example.com", "CUSTOMER");
         assertThat(jwtTokenProvider.extractUserId(token)).isEqualTo("user-abc-123");
     }
 
@@ -111,13 +111,13 @@ class JwtTokenProviderTest {
 
     @Test
     void extractRole_customerRole_returnsCustomer() {
-        String token = jwtTokenProvider.generateToken("user-1", "alice", "CUSTOMER");
+        String token = jwtTokenProvider.generateToken("user-1", "alice@example.com", "CUSTOMER");
         assertThat(jwtTokenProvider.extractRole(token)).isEqualTo("CUSTOMER");
     }
 
     @Test
     void extractRole_adminRole_returnsAdmin() {
-        String token = jwtTokenProvider.generateToken("admin-1", "admin", "ADMIN");
+        String token = jwtTokenProvider.generateToken("admin-1", "admin@local.test", "ADMIN");
         assertThat(jwtTokenProvider.extractRole(token)).isEqualTo("ADMIN");
     }
 
@@ -125,14 +125,14 @@ class JwtTokenProviderTest {
 
     @Test
     void isTokenExpired_freshToken_returnsFalse() {
-        String token = jwtTokenProvider.generateToken("user-1", "alice", "CUSTOMER");
+        String token = jwtTokenProvider.generateToken("user-1", "alice@example.com", "CUSTOMER");
         assertThat(jwtTokenProvider.isTokenExpired(token)).isFalse();
     }
 
     @Test
     void isTokenExpired_expiredToken_returnsTrue() throws InterruptedException {
         ReflectionTestUtils.setField(jwtTokenProvider, "jwtExpiration", 1L);
-        String token = jwtTokenProvider.generateToken("user-1", "alice", "CUSTOMER");
+        String token = jwtTokenProvider.generateToken("user-1", "alice@example.com", "CUSTOMER");
         Thread.sleep(50);
         assertThat(jwtTokenProvider.isTokenExpired(token)).isTrue();
     }
@@ -141,10 +141,10 @@ class JwtTokenProviderTest {
 
     @Test
     void generateAndExtract_allClaimsRoundTrip() {
-        String token = jwtTokenProvider.generateToken("user-xyz", "charlie", "ADMIN");
+        String token = jwtTokenProvider.generateToken("user-xyz", "charlie@example.com", "ADMIN");
         assertThat(jwtTokenProvider.validateToken(token)).isTrue();
         assertThat(jwtTokenProvider.extractUserId(token)).isEqualTo("user-xyz");
-        assertThat(jwtTokenProvider.extractUsername(token)).isEqualTo("charlie");
+        assertThat(jwtTokenProvider.extractEmail(token)).isEqualTo("charlie@example.com");
         assertThat(jwtTokenProvider.extractRole(token)).isEqualTo("ADMIN");
         assertThat(jwtTokenProvider.isTokenExpired(token)).isFalse();
     }

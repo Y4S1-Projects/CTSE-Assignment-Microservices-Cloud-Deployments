@@ -83,22 +83,12 @@ public class AuthServiceImpl implements AuthService {
         if (request.getPassword() == null || request.getPassword().length() < 6) {
             throw new IllegalArgumentException("Password must be at least 6 characters");
         }
-        if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
-            throw new IllegalArgumentException("Username is required");
-        }
-
         Optional<User> existingUserByEmail = userRepository.findByEmail(request.getEmail());
         if (existingUserByEmail.isPresent()) {
             throw new UserAlreadyExistsException("User with this email already exists");
         }
 
-        Optional<User> existingUserByUsername = userRepository.findByUsername(request.getUsername());
-        if (existingUserByUsername.isPresent()) {
-            throw new UserAlreadyExistsException("User with this username already exists");
-        }
-
         User savedUser = userRepository.save(User.builder()
-                .username(request.getUsername())
                 .email(request.getEmail())
                 .fullName(request.getFullName())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
@@ -134,8 +124,8 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void changePassword(String username, ChangePasswordRequest request) {
-        User user = getUserByUsername(username);
+    public void changePassword(String email, ChangePasswordRequest request) {
+        User user = getUserByEmail(email);
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
             throw new InvalidCredentialsException("Old password is incorrect");
@@ -192,8 +182,8 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public String extractUsername(String token) {
-        return jwtTokenProvider.extractUsername(token);
+    public String extractEmail(String token) {
+        return jwtTokenProvider.extractEmail(token);
     }
 
     @Override
@@ -202,13 +192,13 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public User getUserByUsername(String username) {
-        return userRepository.findByUsername(username)
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
                 .orElseThrow(() -> new InvalidCredentialsException("User not found"));
     }
 
     private LoginResponse issueTokens(User user) {
-        String accessToken = jwtTokenProvider.generateToken(user.getId(), user.getUsername(), user.getRole().name());
+        String accessToken = jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole().name());
 
         String refreshTokenValue = UUID.randomUUID().toString();
         RefreshToken refreshToken = RefreshToken.builder()
@@ -224,7 +214,7 @@ public class AuthServiceImpl implements AuthService {
                 .token(accessToken)
                 .accessToken(accessToken)
                 .refreshToken(refreshTokenValue)
-                .username(user.getUsername())
+            .email(user.getEmail())
                 .userId(user.getId())
                 .role(user.getRole())
                 .build();

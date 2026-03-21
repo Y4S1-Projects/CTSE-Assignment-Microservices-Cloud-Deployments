@@ -48,7 +48,7 @@ export default function AdminPage() {
 	const [itemForm, setItemForm] = useState(emptyItemForm);
 	const [savingItem, setSavingItem] = useState(false);
 	// Inline stock edit
-	const [editingStock, setEditingStock] = useState({});   // { [id]: newStockValue }
+	const [editingStock, setEditingStock] = useState({}); // { [id]: newStockValue }
 
 	async function loadData() {
 		setError("");
@@ -86,7 +86,7 @@ export default function AdminPage() {
 		setSuccess("");
 		try {
 			await updateUserStatus(user.id, !user.active);
-			setSuccess(`Updated status for ${user.username}`);
+			setSuccess(`Updated status for ${user.email}`);
 			await loadData();
 		} catch (err) {
 			setError(err.message || "Failed to update user status");
@@ -192,8 +192,12 @@ export default function AdminPage() {
 					</div>
 					<Button onClick={handleLogout}>Logout</Button>
 				</div>
-				{error ? <p className='text-sm text-red-600'>{error}</p> : null}
-				{success ? <p className='text-sm text-green-700'>{success}</p> : null}
+				{error ?
+					<p className='text-sm text-red-600'>{error}</p>
+				:	null}
+				{success ?
+					<p className='text-sm text-green-700'>{success}</p>
+				:	null}
 			</Card>
 
 			{/* ── nav tabs ── */}
@@ -214,14 +218,14 @@ export default function AdminPage() {
 			{/* ── Dashboard tab ── */}
 			{activeTab === "dashboard" && (
 				<div className='space-y-4'>
-					{dashboard ? (
+					{dashboard ?
 						<>
 							<div className='grid grid-cols-2 gap-4 sm:grid-cols-4'>
 								{[
-									{ label: "Total Items",    value: dashboard.totalItems,    color: "bg-blue-50 text-blue-700" },
-									{ label: "In Stock",       value: dashboard.availableItems,  color: "bg-green-50 text-green-700" },
-									{ label: "Out of Stock",   value: dashboard.outOfStockItems, color: "bg-red-50 text-red-700" },
-									{ label: "Low Stock (≤5)", value: dashboard.lowStockItems,   color: "bg-yellow-50 text-yellow-700" },
+									{ label: "Total Items", value: dashboard.totalItems, color: "bg-blue-50 text-blue-700" },
+									{ label: "In Stock", value: dashboard.availableItems, color: "bg-green-50 text-green-700" },
+									{ label: "Out of Stock", value: dashboard.outOfStockItems, color: "bg-red-50 text-red-700" },
+									{ label: "Low Stock (≤5)", value: dashboard.lowStockItems, color: "bg-yellow-50 text-yellow-700" },
 								].map((stat) => (
 									<Card key={stat.label} className={`text-center ${stat.color}`}>
 										<p className='text-3xl font-bold'>{stat.value}</p>
@@ -254,9 +258,10 @@ export default function AdminPage() {
 								</div>
 							</Card>
 						</>
-					) : (
-						<Card><p className='text-sm text-slate-500'>Loading dashboard…</p></Card>
-					)}
+					:	<Card>
+							<p className='text-sm text-slate-500'>Loading dashboard…</p>
+						</Card>
+					}
 				</div>
 			)}
 
@@ -279,12 +284,13 @@ export default function AdminPage() {
 					<Card className='space-y-4'>
 						<div className='flex items-center justify-between'>
 							<h2 className='text-lg font-semibold text-slate-900'>All Orders</h2>
-							<Button variant='secondary' onClick={loadData}>Refresh</Button>
+							<Button variant='secondary' onClick={loadData}>
+								Refresh
+							</Button>
 						</div>
-						{orders.length === 0 ? (
+						{orders.length === 0 ?
 							<p className='text-sm text-slate-500'>No orders yet.</p>
-						) : (
-							<div className='overflow-x-auto'>
+						:	<div className='overflow-x-auto'>
 								<table className='min-w-full text-left text-sm'>
 									<thead>
 										<tr className='border-b border-brand-100 text-brand-800'>
@@ -309,18 +315,20 @@ export default function AdminPage() {
 												<td className='py-2 pr-4'>{formatPrice(order.amount)}</td>
 												<td className='py-2 pr-4'>{order.paymentMethod || "—"}</td>
 												<td className='py-2 pr-4'>
-													<span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-														order.status === "COMPLETED" ? "bg-green-100 text-green-700" :
-														order.status === "FAILED" ? "bg-red-100 text-red-700" :
-														"bg-yellow-100 text-yellow-700"
-													}`}>
+													<span
+														className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+															order.status === "COMPLETED" ? "bg-green-100 text-green-700"
+															: order.status === "FAILED" ? "bg-red-100 text-red-700"
+															: "bg-yellow-100 text-yellow-700"
+														}`}>
 														{order.status}
 													</span>
 												</td>
 												<td className='py-2 pr-4'>
-													<span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-														order.isSuccessCheckout ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"
-													}`}>
+													<span
+														className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+															order.isSuccessCheckout ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"
+														}`}>
 														{order.isSuccessCheckout ? "✓ Confirmed" : "Pending"}
 													</span>
 												</td>
@@ -332,7 +340,7 @@ export default function AdminPage() {
 									</tbody>
 								</table>
 							</div>
-						)}
+						}
 					</Card>
 
 					<Card className='space-y-4'>
@@ -352,7 +360,9 @@ export default function AdminPage() {
 								</select>
 							</label>
 							<div className='flex items-end'>
-								<Button type='submit' className='w-full'>Update Status</Button>
+								<Button type='submit' className='w-full'>
+									Update Status
+								</Button>
 							</div>
 						</form>
 					</Card>
@@ -367,7 +377,7 @@ export default function AdminPage() {
 						<table className='min-w-full text-left text-sm'>
 							<thead>
 								<tr className='border-b border-brand-100 text-brand-800'>
-									<th className='py-2 pr-4'>Username</th>
+									<th className='py-2 pr-4'>Email</th>
 									<th className='py-2 pr-4'>Role</th>
 									<th className='py-2 pr-4'>Active</th>
 									<th className='py-2 pr-4'>Action</th>
@@ -375,8 +385,8 @@ export default function AdminPage() {
 							</thead>
 							<tbody>
 								{users.map((user) => (
-									<tr key={user.id || user.username} className='border-b border-brand-50 text-slate-700'>
-										<td className='py-2 pr-4'>{user.username}</td>
+									<tr key={user.id || user.email} className='border-b border-brand-50 text-slate-700'>
+										<td className='py-2 pr-4'>{user.email}</td>
 										<td className='py-2 pr-4'>{user.role}</td>
 										<td className='py-2 pr-4'>{user.active ? "Yes" : "No"}</td>
 										<td className='py-2 pr-4'>
@@ -394,4 +404,3 @@ export default function AdminPage() {
 		</div>
 	);
 }
-

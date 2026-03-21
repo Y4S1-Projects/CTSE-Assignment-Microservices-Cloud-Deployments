@@ -21,7 +21,7 @@ export default function LoginPage() {
 		try {
 			const response = await loginUser(form);
 			const role = response?.role || response?.user?.role;
-			router.push(role === "ADMIN" ? "/admin" : "/customer");
+			window.location.href = role === "ADMIN" ? "/admin" : "/customer";
 		} catch (submitError) {
 			setError(submitError.message);
 		} finally {

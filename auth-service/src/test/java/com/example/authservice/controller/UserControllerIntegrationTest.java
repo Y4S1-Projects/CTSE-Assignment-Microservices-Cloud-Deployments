@@ -55,7 +55,6 @@ class UserControllerIntegrationTest {
     private LoginResponse registerCustomer() {
         String uid = UUID.randomUUID().toString().replace("-", "").substring(0, 10);
         RegisterRequest req = RegisterRequest.builder()
-                .username("cust_" + uid)
                 .email("cust_" + uid + "@test.com")
                 .password("Password1!")
                 .fullName("Customer " + uid)
@@ -77,10 +76,9 @@ class UserControllerIntegrationTest {
         ResponseEntity<Map> resp = restTemplate.exchange(url("/users/me"), HttpMethod.GET, entity, Map.class);
 
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(resp.getBody()).containsKey("username");
         assertThat(resp.getBody()).containsKey("email");
         assertThat(resp.getBody()).containsKey("role");
-        assertThat(resp.getBody().get("username")).isEqualTo(reg.getUsername());
+        assertThat(resp.getBody().get("email")).isEqualTo(reg.getEmail());
     }
 
     @Test

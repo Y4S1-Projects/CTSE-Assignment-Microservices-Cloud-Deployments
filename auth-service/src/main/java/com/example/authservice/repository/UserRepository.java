@@ -8,7 +8,6 @@ import java.util.List;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, String> {
-    Optional<User> findByUsername(String username);
     Optional<User> findByEmail(String email);
     List<User> findByActive(boolean active);
 }
