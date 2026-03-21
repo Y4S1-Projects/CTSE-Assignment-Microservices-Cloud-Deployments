@@ -64,7 +64,6 @@ class AdminControllerIntegrationTest {
     private String customerToken() {
         String uid = UUID.randomUUID().toString().replace("-", "").substring(0, 10);
         RegisterRequest req = RegisterRequest.builder()
-                .username("cst_" + uid)
                 .email("cst_" + uid + "@test.com")
                 .password("Pass1!")
                 .fullName("Customer " + uid)
@@ -112,7 +111,6 @@ class AdminControllerIntegrationTest {
     void createUser_asAdmin_returns201WithUserData() {
         String uid = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         AdminCreateUserRequest req = AdminCreateUserRequest.builder()
-                .username("admin_created_" + uid)
                 .email("admin_created_" + uid + "@test.com")
                 .fullName("Admin Created User")
                 .password("Password1!")
@@ -122,7 +120,7 @@ class AdminControllerIntegrationTest {
         ResponseEntity<Map> resp = restTemplate.exchange(url("/admin/users"), HttpMethod.POST, entity, Map.class);
 
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(resp.getBody().get("username")).isEqualTo("admin_created_" + uid);
+                assertThat(resp.getBody().get("email")).isEqualTo("admin_created_" + uid + "@test.com");
         assertThat(resp.getBody()).containsKey("id");
     }
 
@@ -130,7 +128,6 @@ class AdminControllerIntegrationTest {
     void createAdminUser_asAdmin_returns201WithAdminRole() {
         String uid = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         AdminCreateUserRequest req = AdminCreateUserRequest.builder()
-                .username("new_admin_" + uid)
                 .email("new_admin_" + uid + "@test.com")
                 .fullName("New Admin")
                 .password("Password1!")
@@ -147,7 +144,7 @@ class AdminControllerIntegrationTest {
     @Test
     void createUser_asCustomer_returns403() {
         AdminCreateUserRequest req = AdminCreateUserRequest.builder()
-                .username("should_fail").email("fail@test.com")
+                                .email("fail@test.com")
                 .fullName("Fail").password("Password1!").build();
         HttpEntity<AdminCreateUserRequest> entity = new HttpEntity<>(req, bearerHeaders(customerToken()));
 
@@ -165,7 +162,7 @@ class AdminControllerIntegrationTest {
         // Create user first
         String uid = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         AdminCreateUserRequest createReq = AdminCreateUserRequest.builder()
-                .username("byid_" + uid).email("byid_" + uid + "@test.com")
+                .email("byid_" + uid + "@test.com")
                 .fullName("By ID User").password("Password1!").build();
         String adminTok = adminToken();
         ResponseEntity<Map> created = restTemplate.exchange(url("/admin/users"), HttpMethod.POST,
@@ -178,7 +175,7 @@ class AdminControllerIntegrationTest {
 
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(resp.getBody().get("id")).isEqualTo(userId);
-        assertThat(resp.getBody().get("username")).isEqualTo("byid_" + uid);
+        assertThat(resp.getBody().get("email")).isEqualTo("byid_" + uid + "@test.com");
     }
 
     @Test
@@ -207,7 +204,7 @@ class AdminControllerIntegrationTest {
         String uid = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         String email = "deactivate_" + uid + "@test.com";
         RegisterRequest regReq = RegisterRequest.builder()
-                .username("deact_" + uid).email(email).password("Password1!").fullName("Deactivate Me").build();
+                .email(email).password("Password1!").fullName("Deactivate Me").build();
         ResponseEntity<LoginResponse> regResp = restTemplate.postForEntity(url("/register"), regReq, LoginResponse.class);
         String userId = regResp.getBody().getUserId();
         String adminTok = adminToken();
@@ -233,7 +230,7 @@ class AdminControllerIntegrationTest {
         String uid = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         String email = "react_" + uid + "@test.com";
         RegisterRequest regReq = RegisterRequest.builder()
-                .username("react_" + uid).email(email).password("Pass1!").fullName("Reactivate Me").build();
+                .email(email).password("Pass1!").fullName("Reactivate Me").build();
         ResponseEntity<LoginResponse> regResp = restTemplate.postForEntity(url("/register"), regReq, LoginResponse.class);
         String userId = regResp.getBody().getUserId();
         String adminTok = adminToken();
@@ -272,7 +269,7 @@ class AdminControllerIntegrationTest {
     void deleteUser_asAdmin_returns204AndUserGone() {
         String uid = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         AdminCreateUserRequest createReq = AdminCreateUserRequest.builder()
-                .username("del_" + uid).email("del_" + uid + "@test.com")
+                                .email("del_" + uid + "@test.com")
                 .fullName("To Delete").password("Password1!").build();
         String adminTok = adminToken();
         ResponseEntity<Map> created = restTemplate.exchange(url("/admin/users"), HttpMethod.POST,

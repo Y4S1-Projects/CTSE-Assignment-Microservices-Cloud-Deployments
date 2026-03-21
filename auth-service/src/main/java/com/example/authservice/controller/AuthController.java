@@ -131,7 +131,7 @@ public class AuthController {
             Map<String, Object> response = new HashMap<>();
             response.put("valid", true);
             response.put("userId", authService.extractUserId(token));
-            response.put("username", authService.extractUsername(token));
+            response.put("email", authService.extractEmail(token));
             response.put("role", authService.extractRole(token));
             return ResponseEntity.ok(response);
         } else {

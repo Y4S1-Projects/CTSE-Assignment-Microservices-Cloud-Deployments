@@ -31,7 +31,6 @@ public class AdminController {
         Role role = request.getRole() == null ? Role.CUSTOMER : request.getRole();
 
         User saved = userRepository.save(User.builder()
-                .username(request.getUsername())
                 .email(request.getEmail())
                 .fullName(request.getFullName())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
@@ -70,7 +69,6 @@ public class AdminController {
     private UserProfileResponse toProfile(User user) {
         return UserProfileResponse.builder()
                 .id(user.getId())
-                .username(user.getUsername())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .role(user.getRole())

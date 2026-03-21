@@ -3,12 +3,19 @@ const REFRESH_KEY = "frontend_refresh_token";
 const USER_KEY = "frontend_user";
 const CART_KEY = "frontend_cart";
 const ORDER_HISTORY_KEY = "frontend_order_history";
+const AUTH_SESSION_EVENT = "auth-session-changed";
+
+function notifyAuthSessionChanged() {
+	if (typeof window === "undefined") return;
+	window.dispatchEvent(new Event(AUTH_SESSION_EVENT));
+}
 
 export function saveAuthSession(session) {
 	if (typeof window === "undefined") return;
 	if (session?.token) localStorage.setItem(TOKEN_KEY, session.token);
 	if (session?.refreshToken) localStorage.setItem(REFRESH_KEY, session.refreshToken);
 	if (session?.user) localStorage.setItem(USER_KEY, JSON.stringify(session.user));
+	notifyAuthSessionChanged();
 }
 
 export function clearAuthSession() {
@@ -16,6 +23,7 @@ export function clearAuthSession() {
 	localStorage.removeItem(TOKEN_KEY);
 	localStorage.removeItem(REFRESH_KEY);
 	localStorage.removeItem(USER_KEY);
+	notifyAuthSessionChanged();
 }
 
 export function getAuthToken() {
@@ -31,7 +39,13 @@ export function getRefreshToken() {
 export function getCurrentUser() {
 	if (typeof window === "undefined") return null;
 	const raw = localStorage.getItem(USER_KEY);
-	return raw ? JSON.parse(raw) : null;
+	if (!raw) return null;
+	try {
+		return JSON.parse(raw);
+	} catch {
+		localStorage.removeItem(USER_KEY);
+		return null;
+	}
 }
 
 export function isAuthenticated() {

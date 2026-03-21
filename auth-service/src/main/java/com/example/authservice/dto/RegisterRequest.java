@@ -10,9 +10,6 @@ import lombok.*;
 @Schema(description = "User registration request")
 public class RegisterRequest {
     
-    @Schema(description = "Desired username (must be unique)", example = "john.doe", required = true)
-    private String username;
-    
     @Schema(description = "Email address (must be unique)", example = "john.doe@example.com", required = true)
     private String email;
     

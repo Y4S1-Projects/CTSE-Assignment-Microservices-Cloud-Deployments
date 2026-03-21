@@ -3,7 +3,6 @@ import { clearAuthSession, getRefreshToken, saveAuthSession } from "@/lib/storag
 
 export async function registerUser(formData) {
 	const payload = {
-		username: formData.username,
 		email: formData.email,
 		password: formData.password,
 		fullName: formData.fullName,
@@ -27,9 +26,13 @@ export async function loginUser(credentials) {
 	});
 
 	const token = data?.token || data?.accessToken;
+	if (!token) {
+		throw new Error("Login succeeded but no access token was returned");
+	}
 	const user = {
 		userId: data?.userId,
-		username: data?.username || credentials?.email,
+		id: data?.userId,
+		email: data?.email || credentials?.email,
 		role: data?.role || "CUSTOMER",
 	};
 
@@ -72,6 +75,13 @@ export async function logoutUser() {
 export async function getMyProfile() {
 	return apiRequest("/auth/users/me", {
 		method: "GET",
+	});
+}
+
+export async function updateMyProfile(payload) {
+	return apiRequest("/auth/users/profile", {
+		method: "PUT",
+		body: JSON.stringify(payload),
 	});
 }
 
