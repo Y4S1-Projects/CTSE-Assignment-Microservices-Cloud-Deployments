@@ -193,3 +193,10 @@ export async function getPaymentByOrderId(orderId) {
 	return apiRequest(`/payments/order/${orderId}`, { method: "GET" });
 }
 
+export async function createStripeIntent(data) {
+	return apiRequest("/payments/stripe/create-intent", {
+		method: "POST",
+		body: JSON.stringify(data),
+	});
+}
+

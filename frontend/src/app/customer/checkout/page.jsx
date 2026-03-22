@@ -2,15 +2,27 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
 import Card from "@/components/common/Card";
 import Button from "@/components/common/Button";
-import { checkout, createOrder } from "@/lib/foodService";
+import { checkout, createOrder, createStripeIntent } from "@/lib/foodService";
 import {
   clearCart,
   getAuthToken,
   getCart,
   getCurrentUser,
 } from "@/lib/storage";
+
+// Dynamic import to avoid hydration issues with Stripe
+const StripeCheckout = dynamic(() => import("@/components/StripeCheckout"), {
+  ssr: false,
+});
+
+const stripePromise = loadStripe(
+  "pk_test_51TDiNzRL1F3MeUCkfwlcHcpbzslBdXs3UwCyvUyHEGCDJXZk81CfTxFRWKZTpbPT6YipeDen5QadaOupTdaCpkj1002q1GoINw",
+);
 
 function formatPrice(value) {
   const numeric = Number(value || 0);
@@ -27,6 +39,13 @@ export default function CheckoutPage() {
   const [cvv, setCvv] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Stripe mode state
+  const [stripeMode, setStripeMode] = useState(false);
+  const [stripeClientSecret, setStripeClientSecret] = useState(null);
+  const [stripePaymentIntentId, setStripePaymentIntentId] = useState(null);
+  const [stripeLoading, setStripeLoading] = useState(false);
+  const [stripeOrderId, setStripeOrderId] = useState(null);
 
   const subtotal = cart.reduce(
     (sum, item) => sum + Number(item.price || 0) * item.quantity,
@@ -87,6 +106,88 @@ export default function CheckoutPage() {
     } catch (err) {
       setError(err.message || "Payment failed. Please try again.");
       setLoading(false);
+    }
+  }
+
+  async function handlePayWithStripe() {
+    setStripeLoading(true);
+    setError("");
+    const userId = getCurrentUser()?.id || "guest";
+
+    try {
+      // 1) Create the order in order-service first
+      const created = await createOrder(cart);
+      setStripeOrderId(created.id);
+
+      // 2) Create Stripe PaymentIntent for the full order amount (in cents)
+      const amountInCents = Math.round(subtotal * 100);
+
+      const intentData = await createStripeIntent({
+        orderId: created.id,
+        userId,
+        itemId: created.items?.[0]?.itemId || "",
+        quantity: cart.length,
+        amount: amountInCents,
+        currency: "usd",
+        description: `Order ${created.id} - ${cart.length} items`,
+      });
+
+      if (!intentData || !intentData.clientSecret) {
+        throw new Error("Failed to create Stripe PaymentIntent");
+      }
+
+      // 3) Store the intent details and show the modal
+      setStripeClientSecret(intentData.clientSecret);
+      setStripePaymentIntentId(intentData.paymentIntentId);
+      setStripeMode(true);
+      setStripeLoading(false);
+    } catch (err) {
+      setError(
+        err.message || "Failed to initiate Stripe payment. Please try again.",
+      );
+      setStripeLoading(false);
+    }
+  }
+
+  async function handleStripeSuccess() {
+    // Payment confirmed by Stripe -- now mark items as COMPLETED in our backend
+    try {
+      if (!stripeOrderId) {
+        setError("Missing Stripe order ID. Please retry payment.");
+        return;
+      }
+
+      const orderItems = cart.map((item) => ({
+        itemId: item.id,
+        catalogItemId: item.itemId || item.id,
+        quantity: item.quantity,
+        lineTotal: item.price * item.quantity,
+      }));
+
+      for (const orderItem of orderItems) {
+        await checkout({
+          itemId: orderItem.catalogItemId,
+          orderId: stripeOrderId,
+          userId: getCurrentUser()?.id || "guest",
+          quantity: orderItem.quantity,
+          amount: orderItem.lineTotal,
+          paymentMethod: "STRIPE",
+        });
+      }
+
+      clearCart();
+      setStripeMode(false);
+      setStripeClientSecret(null);
+      setStripePaymentIntentId(null);
+      setStripeOrderId(null);
+      router.push(
+        `/customer/payment-success?orderId=${stripeOrderId}&total=${subtotal.toFixed(2)}`,
+      );
+    } catch (err) {
+      setError(
+        "Payment succeeded but failed to finalize order. Please contact support.",
+      );
+      console.error(err);
     }
   }
 
@@ -240,18 +341,46 @@ export default function CheckoutPage() {
           variant="secondary"
           className="flex-1"
           onClick={() => router.push("/customer")}
-          disabled={loading}
+          disabled={loading || stripeLoading}
         >
           Back to Cart
         </Button>
         <Button
           className="flex-1"
           onClick={handlePay}
-          disabled={loading || cart.length === 0}
+          disabled={loading || stripeLoading || cart.length === 0}
         >
           {loading ? "Processing..." : `Pay ${formatPrice(subtotal)}`}
         </Button>
+        <Button
+          className="flex-1 bg-purple-600 hover:bg-purple-700"
+          onClick={handlePayWithStripe}
+          disabled={loading || stripeLoading || cart.length === 0}
+        >
+          {stripeLoading ? "Loading..." : `💳 Pay with Stripe`}
+        </Button>
       </div>
+
+      {/* Stripe Modal Overlay */}
+      {stripeMode && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4">
+            <Elements stripe={stripePromise}>
+              <StripeCheckout
+                clientSecret={stripeClientSecret}
+                amount={subtotal}
+                orderId={stripeOrderId}
+                onSuccess={handleStripeSuccess}
+                onCancel={() => {
+                  setStripeMode(false);
+                  setStripeClientSecret(null);
+                  setStripePaymentIntentId(null);
+                }}
+              />
+            </Elements>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
