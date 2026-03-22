@@ -65,9 +65,9 @@ A production-ready microservices architecture for a food ordering system built w
          │          │          │          │
          └──────────┴──────────┴──────────┘
                      │
-             ┌───────────────▼───────────────┐
-             │ MongoDB (food_delivery_system)│
-             └───────────────────────────────┘
+             ┌─────────────────────────────────┐
+             │ PostgreSQL (Neon/local Postgres)│
+             └─────────────────────────────────┘
 ```
 
 ---
@@ -160,9 +160,8 @@ POST http://localhost:8080/auth/register
 Content-Type: application/json
 
 {
-  "username": "john.doe",
   "email": "john.doe@example.com",
-  "password": "password123",
+  "password": "Password1!",
   "fullName": "John Doe"
 }
 
@@ -172,7 +171,7 @@ Content-Type: application/json
 
 {
   "email": "john.doe@example.com",
-  "password": "password123"
+  "password": "Password1!"
 }
 
 # Login response (example)
@@ -180,7 +179,6 @@ Content-Type: application/json
   "accessToken": "<jwt-access-token>",
   "refreshToken": "<refresh-token>",
   "userId": "550e8400-e29b-41d4-a716-446655440000",
-  "username": "john.doe",
   "role": "CUSTOMER"
 }
 
@@ -206,7 +204,7 @@ Authorization: Bearer <your-jwt-token>
 - **Spring Boot 3.x** - Application framework
 - **Spring Cloud Gateway 2024.0.0** - API Gateway
 - **Spring Security** - Authentication & Authorization
-- **Spring Data MongoDB** - Data persistence
+- **Spring Data JPA** - Data persistence
 
 ### Libraries
 
@@ -218,8 +216,7 @@ Authorization: Bearer <your-jwt-token>
 
 ### Database
 
-- **MongoDB** - `food_delivery_system` database
-- Collections auto-created on startup: `users`, `addresses`, `refresh_tokens`, `password_reset_tokens`, `auth_logs`
+- **PostgreSQL** - relational persistence for auth domain entities
 
 ### DevOps & Cloud
 
@@ -278,7 +275,7 @@ CTSE-Assignment-Microservices-Cloud-Deployments/
 │   ├── src/main/java/com/example/authservice/
 │   │   ├── entity/           # User entity
 │   │   ├── dto/              # Request/Response DTOs
-│   │   ├── repository/       # Mongo repositories
+│   │   ├── repository/       # JPA repositories
 │   │   ├── service/          # Business logic
 │   │   ├── controller/       # REST controllers
 │   │   ├── config/           # Security, OpenAPI config
@@ -299,8 +296,10 @@ CTSE-Assignment-Microservices-Cloud-Deployments/
 # Required for JWT authentication
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production-min-256-bits
 
-# MongoDB connection string (auth-service)
-MONGODB_URI=mongodb://localhost:27017/food_delivery_system
+# PostgreSQL connection (auth-service)
+DATABASE_URL=jdbc:postgresql://localhost:5432/food_delivery_system
+DATABASE_USER=postgres
+DATABASE_PASSWORD=postgres
 ```
 
 #### Auth bootstrap users (created if missing)
@@ -415,9 +414,8 @@ Use API Gateway URLs for client-side style testing.
 curl -X POST http://localhost:8080/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "testuser",
     "email": "test@example.com",
-    "password": "password123",
+    "password": "Password1!",
     "fullName": "Test User"
   }'
 
@@ -426,12 +424,15 @@ curl -X POST http://localhost:8080/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
-    "password": "password123"
+    "password": "Password1!"
   }'
 
 # 3. Validate token
 curl -X POST http://localhost:8080/auth/validate \
   -H "Authorization: Bearer <your-jwt-token>"
+
+# 4. Run full auth lifecycle verification through API Gateway
+powershell -ExecutionPolicy Bypass -File ./verify-auth-gateway.ps1
 ```
 
 ### Using Swagger UI
@@ -517,7 +518,7 @@ For issues and questions:
 
 ### 📅 Planned
 
-- [ ] MongoDB production hardening (indexes, backup, retention)
+- [ ] PostgreSQL production hardening (indexes, backup, retention)
 - [ ] Service-to-service communication
 - [ ] Distributed tracing
 - [ ] Load testing
@@ -525,5 +526,5 @@ For issues and questions:
 
 ---
 
-**Last Updated:** February 2026  
+**Last Updated:** March 2026  
 **Project Status:** Active Development

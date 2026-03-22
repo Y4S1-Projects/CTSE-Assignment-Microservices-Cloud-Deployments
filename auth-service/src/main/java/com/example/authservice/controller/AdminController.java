@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -28,7 +29,7 @@ public class AdminController {
     private PasswordEncoder passwordEncoder;
 
     @PostMapping
-    public ResponseEntity<UserProfileResponse> createUser(@RequestBody AdminCreateUserRequest request) {
+    public ResponseEntity<UserProfileResponse> createUser(@Valid @RequestBody AdminCreateUserRequest request) {
         Role role = request.getRole() == null ? Role.CUSTOMER : request.getRole();
 
         User saved = userRepository.save(User.builder()
@@ -55,14 +56,14 @@ public class AdminController {
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<UserProfileResponse> updateStatus(@PathVariable String id, @RequestBody UpdateUserStatusRequest request) {
+    public ResponseEntity<UserProfileResponse> updateStatus(@PathVariable String id, @Valid @RequestBody UpdateUserStatusRequest request) {
         User user = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
         user.setActive(request.isActive());
         return ResponseEntity.ok(toProfile(userRepository.save(user)));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<UserProfileResponse> updateUser(@PathVariable String id, @RequestBody AdminUpdateUserRequest request) {
+    public ResponseEntity<UserProfileResponse> updateUser(@PathVariable String id, @Valid @RequestBody AdminUpdateUserRequest request) {
         User user = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         if (request.getEmail() != null && !request.getEmail().isBlank()) {

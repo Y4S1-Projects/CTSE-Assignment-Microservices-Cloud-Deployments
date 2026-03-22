@@ -16,14 +16,14 @@ public class AdminBootstrapConfig {
     public CommandLineRunner bootstrapAdminAndCustomer(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            @Value("${app.admin.bootstrap.enabled:true}") boolean enabled,
-            @Value("${app.admin.bootstrap.email:admin@local.test}") String email,
-            @Value("${app.admin.bootstrap.password:Admin@12345}") String password,
-            @Value("${app.admin.bootstrap.full-name:System Admin}") String fullName,
-            @Value("${app.customer.bootstrap.enabled:true}") boolean customerEnabled,
-            @Value("${app.customer.bootstrap.email:customer@local.test}") String customerEmail,
-            @Value("${app.customer.bootstrap.password:Customer@12345}") String customerPassword,
-            @Value("${app.customer.bootstrap.full-name:Default Customer}") String customerFullName
+            @Value("${app.admin.bootstrap.enabled}") boolean enabled,
+            @Value("${app.admin.bootstrap.email}") String email,
+            @Value("${app.admin.bootstrap.password}") String password,
+            @Value("${app.admin.bootstrap.full-name}") String fullName,
+            @Value("${app.customer.bootstrap.enabled}") boolean customerEnabled,
+            @Value("${app.customer.bootstrap.email}") String customerEmail,
+            @Value("${app.customer.bootstrap.password}") String customerPassword,
+            @Value("${app.customer.bootstrap.full-name}") String customerFullName
     ) {
         return args -> {
             if (enabled && userRepository.findByEmail(email).isEmpty()) {

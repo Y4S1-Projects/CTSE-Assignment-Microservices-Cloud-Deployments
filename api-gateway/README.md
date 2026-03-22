@@ -275,8 +275,8 @@ X-User-Roles: <comma-separated-roles>
 # 1. Login to get token
 TOKEN=$(curl -s -X POST http://localhost:8080/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"password123"}' \
-  | jq -r '.token')
+  -d '{"email":"user@example.com","password":"Password1!"}' \
+  | jq -r '.accessToken // .token')
 
 # 2. Use token to access protected endpoint
 curl -X GET http://localhost:8080/catalog/items \
@@ -459,9 +459,8 @@ curl http://localhost:8080/
 curl -X POST http://localhost:8080/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "testuser",
     "email": "test@example.com",
-    "password": "password123",
+    "password": "Password1!",
     "fullName": "Test User"
   }'
 
