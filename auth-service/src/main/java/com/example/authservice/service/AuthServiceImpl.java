@@ -25,6 +25,10 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.LocalDateTime;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -51,6 +55,8 @@ public class AuthServiceImpl implements AuthService {
 
     @Value("${app.auth.refresh-expiry-days:7}")
     private int refreshExpiryDays;
+
+    private static final int MIN_PASSWORD_LENGTH = 6;
 
     @Override
     public LoginResponse login(LoginRequest request) {
@@ -146,6 +152,14 @@ public class AuthServiceImpl implements AuthService {
             throw new InvalidCredentialsException("Old password is incorrect");
         }
 
+        if (request.getNewPassword() == null || request.getNewPassword().length() < MIN_PASSWORD_LENGTH) {
+            throw new IllegalArgumentException("New password must be at least 6 characters");
+        }
+
+        if (request.getOldPassword().equals(request.getNewPassword())) {
+            throw new IllegalArgumentException("New password must be different from old password");
+        }
+
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
         auditService.log(user.getId(), "PASSWORD_CHANGED", resolveRequestIp());
@@ -156,24 +170,30 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new InvalidCredentialsException("No user found for email"));
 
+        String rawToken = UUID.randomUUID().toString();
+
         PasswordResetToken resetToken = PasswordResetToken.builder()
                 .userId(user.getId())
-                .token(UUID.randomUUID().toString())
+            .token(hashResetToken(rawToken))
                 .expiryDate(LocalDateTime.now().plusMinutes(30))
                 .used(false)
                 .build();
 
         passwordResetTokenRepository.save(resetToken);
-        return resetToken.getToken();
+        return rawToken;
     }
 
     @Override
     public void resetPassword(ResetPasswordRequest request) {
-        PasswordResetToken token = passwordResetTokenRepository.findByTokenAndUsedFalse(request.getToken())
+        PasswordResetToken token = passwordResetTokenRepository.findByTokenAndUsedFalse(hashResetToken(request.getToken()))
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid reset token"));
 
         if (token.getExpiryDate().isBefore(LocalDateTime.now())) {
             throw new InvalidCredentialsException("Reset token expired");
+        }
+
+        if (request.getNewPassword() == null || request.getNewPassword().length() < MIN_PASSWORD_LENGTH) {
+            throw new IllegalArgumentException("New password must be at least 6 characters");
         }
 
         User user = userRepository.findById(token.getUserId())
@@ -184,6 +204,16 @@ public class AuthServiceImpl implements AuthService {
 
         token.setUsed(true);
         passwordResetTokenRepository.save(token);
+    }
+
+    private String hashResetToken(String rawToken) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 algorithm not available", ex);
+        }
     }
 
     @Override

@@ -23,6 +23,7 @@ import com.example.authservice.dto.ForgotPasswordRequest;
 import com.example.authservice.dto.ResetPasswordRequest;
 import com.example.authservice.service.AuthService;
 import org.springframework.security.core.Authentication;
+import jakarta.validation.Valid;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -54,7 +55,7 @@ public class AuthController {
         @ApiResponse(responseCode = "401", description = "Invalid credentials"),
         @ApiResponse(responseCode = "400", description = "Bad request")
     })
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         logger.info("Login request received for: {}", request.getEmail());
         LoginResponse response = authService.login(request);
         return ResponseEntity.ok(response);
@@ -71,37 +72,37 @@ public class AuthController {
         @ApiResponse(responseCode = "409", description = "User already exists"),
         @ApiResponse(responseCode = "400", description = "Invalid request data")
     })
-    public ResponseEntity<LoginResponse> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
         logger.info("Registration request received for: {}", request.getEmail());
         LoginResponse response = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<LoginResponse> refresh(@RequestBody RefreshRequest request) {
+    public ResponseEntity<LoginResponse> refresh(@Valid @RequestBody RefreshRequest request) {
         return ResponseEntity.ok(authService.refresh(request));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, String>> logout(Authentication authentication, @RequestBody RefreshRequest request) {
+    public ResponseEntity<Map<String, String>> logout(Authentication authentication, @Valid @RequestBody RefreshRequest request) {
         authService.logout(authentication.getName(), request);
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 
     @PostMapping("/change-password")
-    public ResponseEntity<Map<String, String>> changePassword(Authentication authentication, @RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<Map<String, String>> changePassword(Authentication authentication, @Valid @RequestBody ChangePasswordRequest request) {
         authService.changePassword(authentication.getName(), request);
         return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+    public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         String token = authService.forgotPassword(request);
         return ResponseEntity.ok(Map.of("resetToken", token));
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody ResetPasswordRequest request) {
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
         return ResponseEntity.ok(Map.of("message", "Password reset successfully"));
     }

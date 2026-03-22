@@ -9,6 +9,7 @@ import java.util.Optional;
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, String> {
     Optional<Payment> findByOrderId(String orderId);
+    Optional<Payment> findByReference(String reference);   // ← added for Stripe webhook lookup
     List<Payment> findByStatus(String status);
     List<Payment> findByUserId(String userId);
     List<Payment> findByItemId(String itemId);
