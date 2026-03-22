@@ -123,47 +123,11 @@ export default function CustomerPage() {
 	}
 
 	async function handleCheckout() {
-		if (cart.length === 0) return;
-		setPlacingOrder(true);
-		setError("");
-		setSuccess("");
-
-		const userId = profile?.id || "guest";
-
-		try {
-			// 1) Create an order in order-service (validates items with catalog-service)
-			const created = await createOrder(cart);
-
-			// 2) Pay each line item (payment-service decrements stock and marks order as PAID)
-			for (const orderItem of created?.items || []) {
-				await checkout({
-					itemId: orderItem.itemId || orderItem.catalogItemId,
-					orderId: created.id,
-					userId,
-					quantity: orderItem.quantity,
-					amount: orderItem.lineTotal,
-					paymentMethod: "CARD",
-				});
-			}
-
-			// Refresh server-side order list
-			const refreshedOrders = await getMyOrders().catch(() => []);
-			if (refreshedOrders.length > 0) {
-				setOrders(refreshedOrders);
-			} else {
-				setOrders([created, ...orders]);
-			}
-			clearCart();
-			setCart([]);
-			// Refresh catalog items to show updated stock counts
-			const refreshed = await getMenuItems();
-			setMenuItems(refreshed);
-			setSuccess(`Checkout successful! Order ${created?.id || ""} paid. Stock updated in real-time.`);
-		} catch (checkoutError) {
-			setError(checkoutError.message || "Failed to complete checkout");
-		} finally {
-			setPlacingOrder(false);
-		}
+	if (cart.length === 0) return;
+	// Clear cached menu so stock counts refresh when returning from checkout
+  	sessionStorage.removeItem("menuItems");
+	// Navigate to dedicated checkout page instead of processing silently
+	router.push("/customer/checkout");
 	}
 
 	async function handleLogout() {
