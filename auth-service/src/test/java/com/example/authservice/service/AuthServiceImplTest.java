@@ -13,7 +13,11 @@ import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.HexFormat;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -286,16 +290,15 @@ class AuthServiceImplTest {
                 authService.forgotPassword(ForgotPasswordRequest.builder().email("ghost@example.com").build()))
                 .isInstanceOf(InvalidCredentialsException.class);
     }
-
     @Test
     void resetPassword_validToken_changesPassword() {
         PasswordResetToken prt = PasswordResetToken.builder()
-                .token("rt-abc")
+                .token(hashToken("rt-abc"))
                 .userId(activeUser.getId())
                 .expiryDate(LocalDateTime.now().plusMinutes(30))
                 .used(false)
                 .build();
-        when(passwordResetTokenRepository.findByTokenAndUsedFalse("rt-abc")).thenReturn(Optional.of(prt));
+        when(passwordResetTokenRepository.findByTokenAndUsedFalse(hashToken("rt-abc"))).thenReturn(Optional.of(prt));
         when(userRepository.findById(activeUser.getId())).thenReturn(Optional.of(activeUser));
         when(passwordEncoder.encode("new_pw")).thenReturn("new_hashed");
         when(userRepository.save(any())).thenReturn(activeUser);
@@ -311,7 +314,7 @@ class AuthServiceImplTest {
 
     @Test
     void resetPassword_invalidToken_throwsInvalidCredentials() {
-        when(passwordResetTokenRepository.findByTokenAndUsedFalse("bad")).thenReturn(Optional.empty());
+        when(passwordResetTokenRepository.findByTokenAndUsedFalse(hashToken("bad"))).thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
                 authService.resetPassword(
@@ -323,12 +326,12 @@ class AuthServiceImplTest {
     @Test
     void resetPassword_expiredToken_throwsInvalidCredentials() {
         PasswordResetToken expired = PasswordResetToken.builder()
-                .token("exp-rt")
+                .token(hashToken("exp-rt"))
                 .userId(activeUser.getId())
                 .expiryDate(LocalDateTime.now().minusMinutes(1))
                 .used(false)
                 .build();
-        when(passwordResetTokenRepository.findByTokenAndUsedFalse("exp-rt")).thenReturn(Optional.of(expired));
+        when(passwordResetTokenRepository.findByTokenAndUsedFalse(hashToken("exp-rt"))).thenReturn(Optional.of(expired));
 
         assertThatThrownBy(() ->
                 authService.resetPassword(
@@ -372,4 +375,12 @@ class AuthServiceImplTest {
                 assertThatThrownBy(() -> authService.getUserByEmail("ghost@example.com"))
                 .isInstanceOf(InvalidCredentialsException.class);
     }
+        private String hashToken(String value) {
+                try {
+                        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                        return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
+                } catch (NoSuchAlgorithmException ex) {
+                        throw new RuntimeException(ex);
+                }
+        }
 }
