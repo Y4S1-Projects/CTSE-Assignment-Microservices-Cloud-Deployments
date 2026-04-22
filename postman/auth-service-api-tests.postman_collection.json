@@ -1,0 +1,1016 @@
+{
+	"info": {
+		"_postman_id": "d2f5a6a2-9f0f-4d77-9fb1-0b73d1c5af1a",
+		"name": "Auth Service API Surface Tests",
+		"description": "Import this collection and set baseUrl to http://localhost:8081 for direct auth-service testing or http://localhost:8080 for gateway testing. The collection seeds unique test data from the Health Check request and runs the full auth lifecycle plus admin CRUD.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"if (pm.info.requestName === '01. Health Check') {",
+					"  var seed = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);",
+					"  pm.collectionVariables.set('testEmail', 'postman.' + seed + '@example.com');",
+					"  pm.collectionVariables.set('adminTestEmail', 'admin.postman.' + seed + '@example.com');",
+					"  pm.collectionVariables.set('currentPassword', pm.collectionVariables.get('testPassword'));",
+					"  pm.collectionVariables.set('accessToken', '');",
+					"  pm.collectionVariables.set('refreshToken', '');",
+					"  pm.collectionVariables.set('resetToken', '');",
+					"  pm.collectionVariables.set('adminToken', '');",
+					"  pm.collectionVariables.set('createdUserId', '');",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8081",
+			"type": "string"
+		},
+		{
+			"key": "testPassword",
+			"value": "Password1!",
+			"type": "string"
+		},
+		{
+			"key": "changedPassword",
+			"value": "Password2!",
+			"type": "string"
+		},
+		{
+			"key": "resetPassword",
+			"value": "Password3!",
+			"type": "string"
+		},
+		{
+			"key": "currentPassword",
+			"value": "Password1!",
+			"type": "string"
+		},
+		{
+			"key": "testEmail",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "adminTestEmail",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refreshToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "resetToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "adminToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "createdUserId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "adminEmail",
+			"value": "admin@example.com",
+			"type": "string"
+		},
+		{
+			"key": "adminPassword",
+			"value": "Admin@12345",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Core Auth Flow",
+			"item": [
+				{
+					"name": "01. Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/auth/health"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"var body = pm.response.json();",
+									"pm.test('Service is UP', function () {",
+									"  pm.expect(body.status).to.eql('UP');",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "02. Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"email\": \"{{testEmail}}\", \"password\": \"{{currentPassword}}\", \"fullName\": \"Postman Test User\" }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/register"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200 or 201', function () {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+									"});",
+									"var body = pm.response.json();",
+									"var accessToken = body.accessToken || body.token;",
+									"pm.test('Tokens are returned', function () {",
+									"  pm.expect(accessToken, 'access token').to.be.ok;",
+									"  pm.expect(body.refreshToken, 'refresh token').to.be.ok;",
+									"});",
+									"pm.collectionVariables.set('accessToken', accessToken);",
+									"pm.collectionVariables.set('refreshToken', body.refreshToken);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "03. Login User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"email\": \"{{testEmail}}\", \"password\": \"{{currentPassword}}\" }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"var body = pm.response.json();",
+									"var accessToken = body.accessToken || body.token;",
+									"pm.test('Tokens are returned', function () {",
+									"  pm.expect(accessToken, 'access token').to.be.ok;",
+									"  pm.expect(body.refreshToken, 'refresh token').to.be.ok;",
+									"});",
+									"pm.collectionVariables.set('accessToken', accessToken);",
+									"pm.collectionVariables.set('refreshToken', body.refreshToken);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "04. Validate Token",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/validate"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"var body = pm.response.json();",
+									"pm.test('Token is valid', function () {",
+									"  pm.expect(body.valid).to.eql(true);",
+									"});",
+									"pm.test('Validated email matches', function () {",
+									"  pm.expect(body.email).to.eql(pm.collectionVariables.get('testEmail'));",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "05. Get My Profile",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/users/me"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"var body = pm.response.json();",
+									"pm.test('Profile email matches', function () {",
+									"  pm.expect(body.email).to.eql(pm.collectionVariables.get('testEmail'));",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "06. Update Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"fullName\": \"Postman Test User Updated\", \"phone\": \"0712345678\", \"addresses\": [{ \"label\": \"Home\", \"street\": \"1 Main St\", \"city\": \"Colombo\", \"state\": \"WP\", \"postalCode\": \"10100\", \"country\": \"Sri Lanka\", \"isDefault\": true }, { \"label\": \"Work\", \"street\": \"2 Main St\", \"city\": \"Kandy\", \"state\": \"CP\", \"postalCode\": \"20200\", \"country\": \"Sri Lanka\", \"isDefault\": false }, { \"label\": \"Other\", \"street\": \"3 Main St\", \"city\": \"Galle\", \"state\": \"SP\", \"postalCode\": \"30300\", \"country\": \"Sri Lanka\", \"isDefault\": false }] }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/users/profile"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"var body = pm.response.json();",
+									"pm.test('Three addresses are returned', function () {",
+									"  pm.expect(body.addresses).to.be.an('array');",
+									"  pm.expect(body.addresses).to.have.lengthOf(3);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "07. Reject More Than 3 Addresses",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"addresses\": [{ \"label\": \"Home\", \"street\": \"1 Main St\", \"city\": \"Colombo\", \"state\": \"WP\", \"postalCode\": \"10100\", \"country\": \"Sri Lanka\", \"isDefault\": true }, { \"label\": \"Work\", \"street\": \"2 Main St\", \"city\": \"Kandy\", \"state\": \"CP\", \"postalCode\": \"20200\", \"country\": \"Sri Lanka\", \"isDefault\": false }, { \"label\": \"Other\", \"street\": \"3 Main St\", \"city\": \"Galle\", \"state\": \"SP\", \"postalCode\": \"30300\", \"country\": \"Sri Lanka\", \"isDefault\": false }, { \"label\": \"Extra\", \"street\": \"4 Main St\", \"city\": \"Jaffna\", \"state\": \"NP\", \"postalCode\": \"40400\", \"country\": \"Sri Lanka\", \"isDefault\": false }] }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/users/profile"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": ["pm.test('Status code is 400', function () {", "  pm.response.to.have.status(400);", "});"]
+							}
+						}
+					]
+				},
+				{
+					"name": "08. Refresh Access Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"refreshToken\": \"{{refreshToken}}\" }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/refresh"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"var body = pm.response.json();",
+									"var accessToken = body.accessToken || body.token;",
+									"pm.test('New access token is returned', function () {",
+									"  pm.expect(accessToken).to.be.ok;",
+									"});",
+									"pm.collectionVariables.set('accessToken', accessToken);",
+									"if (body.refreshToken) {",
+									"  pm.collectionVariables.set('refreshToken', body.refreshToken);",
+									"}"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "09. Change Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"oldPassword\": \"{{currentPassword}}\", \"newPassword\": \"{{changedPassword}}\" }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/change-password"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"pm.collectionVariables.set('currentPassword', pm.collectionVariables.get('changedPassword'));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "10. Login With Changed Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"email\": \"{{testEmail}}\", \"password\": \"{{currentPassword}}\" }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"var body = pm.response.json();",
+									"var accessToken = body.accessToken || body.token;",
+									"pm.test('Tokens are returned', function () {",
+									"  pm.expect(accessToken, 'access token').to.be.ok;",
+									"  pm.expect(body.refreshToken, 'refresh token').to.be.ok;",
+									"});",
+									"pm.collectionVariables.set('accessToken', accessToken);",
+									"pm.collectionVariables.set('refreshToken', body.refreshToken);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "11. Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"email\": \"{{testEmail}}\" }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/forgot-password"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"var body = pm.response.json();",
+									"var resetToken = body.resetToken || body.token;",
+									"pm.test('Reset token is returned', function () {",
+									"  pm.expect(resetToken).to.be.ok;",
+									"});",
+									"pm.collectionVariables.set('resetToken', resetToken);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "12. Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"token\": \"{{resetToken}}\", \"newPassword\": \"{{resetPassword}}\" }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/reset-password"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"pm.collectionVariables.set('currentPassword', pm.collectionVariables.get('resetPassword'));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "13. Login With Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"email\": \"{{testEmail}}\", \"password\": \"{{currentPassword}}\" }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"var body = pm.response.json();",
+									"var accessToken = body.accessToken || body.token;",
+									"pm.test('Tokens are returned', function () {",
+									"  pm.expect(accessToken, 'access token').to.be.ok;",
+									"  pm.expect(body.refreshToken, 'refresh token').to.be.ok;",
+									"});",
+									"pm.collectionVariables.set('accessToken', accessToken);",
+									"pm.collectionVariables.set('refreshToken', body.refreshToken);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "14. Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"refreshToken\": \"{{refreshToken}}\" }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/logout"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": ["pm.test('Status code is 200', function () {", "  pm.response.to.have.status(200);", "});"]
+							}
+						}
+					]
+				},
+				{
+					"name": "15. Reuse Refresh After Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"refreshToken\": \"{{refreshToken}}\" }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/refresh"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Refresh token is rejected after logout', function () {",
+									"  pm.expect([400, 401]).to.include(pm.response.code);",
+									"});"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Admin Flow",
+			"item": [
+				{
+					"name": "01. Admin Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"email\": \"{{adminEmail}}\", \"password\": \"{{adminPassword}}\" }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"var body = pm.response.json();",
+									"var adminToken = body.accessToken || body.token;",
+									"pm.test('Admin token is returned', function () {",
+									"  pm.expect(adminToken).to.be.ok;",
+									"});",
+									"pm.collectionVariables.set('adminToken', adminToken);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "02. Create User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"email\": \"{{adminTestEmail}}\", \"fullName\": \"Postman Admin Created User\", \"password\": \"{{testPassword}}\", \"role\": \"CUSTOMER\" }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/admin/users"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"var body = pm.response.json();",
+									"var createdUserId = body.id || body.userId;",
+									"pm.test('Created user id is returned', function () {",
+									"  pm.expect(createdUserId).to.be.ok;",
+									"});",
+									"pm.collectionVariables.set('createdUserId', createdUserId);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "03. List Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/admin/users"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": ["pm.test('Status code is 200', function () {", "  pm.response.to.have.status(200);", "});"]
+							}
+						}
+					]
+				},
+				{
+					"name": "04. Get Created User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/admin/users/{{createdUserId}}"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": ["pm.test('Status code is 200', function () {", "  pm.response.to.have.status(200);", "});"]
+							}
+						}
+					]
+				},
+				{
+					"name": "05. Update User Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"active\": false }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/admin/users/{{createdUserId}}/status"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": ["pm.test('Status code is 200', function () {", "  pm.response.to.have.status(200);", "});"]
+							}
+						}
+					]
+				},
+				{
+					"name": "06. Update Created User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"fullName\": \"Postman Admin Updated User\", \"active\": true, \"role\": \"CUSTOMER\" }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/admin/users/{{createdUserId}}"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": ["pm.test('Status code is 200', function () {", "  pm.response.to.have.status(200);", "});"]
+							}
+						}
+					]
+				},
+				{
+					"name": "07. Delete Created User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/admin/users/{{createdUserId}}"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": ["pm.test('Status code is 204', function () {", "  pm.response.to.have.status(204);", "});"]
+							}
+						}
+					]
+				}
+			]
+		}
+	]
+}

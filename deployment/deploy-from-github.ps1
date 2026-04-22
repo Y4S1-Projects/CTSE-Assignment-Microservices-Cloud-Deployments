@@ -9,7 +9,9 @@ param(
     [string]$GitHubRepo = "y4s1-projects/ctse-assignment-microservices-cloud-deployments",
     [string]$ImageTag = "latest",
     [string]$JwtSecret = "",
-    [string]$MongoDbUri = "",
+    [string]$DatabaseUrl = "jdbc:postgresql://ep-bitter-heart-aogzv7s0.c-2.ap-southeast-1.aws.neon.tech:5432/neondb?sslmode=require",
+    [string]$DatabaseUser = "neondb_owner",
+    [string]$DatabasePassword = "npg_EcoVLd0FiD7a",
     [string]$GitHubUsername = "",
     [string]$GitHubToken = ""
 )
@@ -253,9 +255,8 @@ Write-Host "Environment: $EnvironmentName" -ForegroundColor White
 Write-Host "Repository: $GitHubRepo" -ForegroundColor White
 Write-Host "Image Tag: $ImageTag" -ForegroundColor White
 
-if ([string]::IsNullOrWhiteSpace($MongoDbUri)) {
-    Write-Host "MongoDbUri not provided. auth-service will use its internal default URI." -ForegroundColor Yellow
-    Write-Host "For cloud deployments, pass -MongoDbUri with a reachable MongoDB connection string." -ForegroundColor Yellow
+if ([string]::IsNullOrWhiteSpace($DatabaseUrl) -or [string]::IsNullOrWhiteSpace($DatabaseUser) -or [string]::IsNullOrWhiteSpace($DatabasePassword)) {
+    throw "Neon database configuration is incomplete. Pass -DatabaseUrl, -DatabaseUser and -DatabasePassword."
 }
 
 Ensure-AzureLogin
@@ -280,15 +281,38 @@ Write-Host "  Payment: $($ResolvedAppNames['payment-service'])" -ForegroundColor
 
 Write-Section "Step 5: Deploy Backend Services"
 
-$authEnvVars = @{ JWT_SECRET = $JwtSecret }
-if (-not [string]::IsNullOrWhiteSpace($MongoDbUri)) {
-    $authEnvVars["MONGODB_URI"] = $MongoDbUri
+$authEnvVars = @{
+    JWT_SECRET = $JwtSecret
+    DATABASE_URL = $DatabaseUrl
+    DATABASE_USER = $DatabaseUser
+    DATABASE_PASSWORD = $DatabasePassword
+}
+
+$catalogEnvVars = @{
+    JWT_SECRET = $JwtSecret
+    DATABASE_URL = $DatabaseUrl
+    DATABASE_USER = $DatabaseUser
+    DATABASE_PASSWORD = $DatabasePassword
+}
+
+$orderEnvVars = @{
+    JWT_SECRET = $JwtSecret
+    DATABASE_URL = $DatabaseUrl
+    DATABASE_USER = $DatabaseUser
+    DATABASE_PASSWORD = $DatabasePassword
+}
+
+$paymentEnvVars = @{
+    JWT_SECRET = $JwtSecret
+    DATABASE_URL = $DatabaseUrl
+    DATABASE_USER = $DatabaseUser
+    DATABASE_PASSWORD = $DatabasePassword
 }
 
 Deploy-ContainerApp -ServiceName "auth-service" -Port 8081 -Ingress "internal" -EnvVars $authEnvVars
-Deploy-ContainerApp -ServiceName "catalog-service" -Port 8082 -Ingress "internal" -EnvVars @{ JWT_SECRET = $JwtSecret }
-Deploy-ContainerApp -ServiceName "order-service" -Port 8083 -Ingress "internal" -EnvVars @{ JWT_SECRET = $JwtSecret }
-Deploy-ContainerApp -ServiceName "payment-service" -Port 8084 -Ingress "internal" -EnvVars @{ JWT_SECRET = $JwtSecret }
+Deploy-ContainerApp -ServiceName "catalog-service" -Port 8082 -Ingress "internal" -EnvVars $catalogEnvVars
+Deploy-ContainerApp -ServiceName "order-service" -Port 8083 -Ingress "internal" -EnvVars $orderEnvVars
+Deploy-ContainerApp -ServiceName "payment-service" -Port 8084 -Ingress "internal" -EnvVars $paymentEnvVars
 
 $authServiceUrl = "http://$($ResolvedAppNames['auth-service'])"
 $catalogServiceUrl = "http://$($ResolvedAppNames['catalog-service'])"

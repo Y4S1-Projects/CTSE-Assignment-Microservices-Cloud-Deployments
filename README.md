@@ -297,9 +297,9 @@ CTSE-Assignment-Microservices-Cloud-Deployments/
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production-min-256-bits
 
 # PostgreSQL connection (auth-service)
-DATABASE_URL=jdbc:postgresql://localhost:5432/food_delivery_system
-DATABASE_USER=postgres
-DATABASE_PASSWORD=postgres
+DATABASE_URL=jdbc:postgresql://ep-bitter-heart-aogzv7s0.c-2.ap-southeast-1.aws.neon.tech:5432/neondb?sslmode=require
+DATABASE_USER=neondb_owner
+DATABASE_PASSWORD=<your-neon-db-password>
 ```
 
 #### Auth bootstrap users (created if missing)
@@ -355,6 +355,13 @@ The deployment now targets a low-cost Azure Container Apps setup for demos:
 - services: `frontend`, `api-gateway`, `auth-service`, `catalog-service`, `order-service`, `payment-service`
 - scale: `min replicas = 0`, `max replicas = 1`
 - smaller CPU and memory allocations to reduce credit consumption
+
+For hosted GitHub Actions deployments, set these repository secrets:
+
+- `JWT_SECRET`
+- `NEON_DATABASE_URL`
+- `NEON_DATABASE_USER`
+- `NEON_DATABASE_PASSWORD`
 
 ### Deployment Guide and Scripts
 
@@ -432,7 +439,7 @@ curl -X POST http://localhost:8080/auth/validate \
   -H "Authorization: Bearer <your-jwt-token>"
 
 # 4. Run full auth lifecycle verification through API Gateway
-powershell -ExecutionPolicy Bypass -File ./verify-auth-gateway.ps1
+powershell -ExecutionPolicy Bypass -File ./scripts/verify-auth-surface.ps1
 ```
 
 ### Using Swagger UI
