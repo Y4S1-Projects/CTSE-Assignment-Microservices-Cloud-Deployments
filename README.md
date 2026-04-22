@@ -439,7 +439,7 @@ curl -X POST http://localhost:8080/auth/validate \
   -H "Authorization: Bearer <your-jwt-token>"
 
 # 4. Run full auth lifecycle verification through API Gateway
-powershell -ExecutionPolicy Bypass -File ./verify-auth-gateway.ps1
+powershell -ExecutionPolicy Bypass -File ./scripts/verify-auth-surface.ps1
 ```
 
 ### Using Swagger UI
