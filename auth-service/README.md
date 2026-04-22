@@ -329,7 +329,7 @@ mvn "-Dtest=UserControllerIntegrationTest" test
 From repository root:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File ./verify-auth-gateway.ps1
+powershell -ExecutionPolicy Bypass -File ./scripts/verify-auth-surface.ps1
 ```
 
 Optional direct-service smoke script:

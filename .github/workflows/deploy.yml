@@ -2,9 +2,9 @@ name: Build, Scan & Deploy Microservices
 
 on:
   push:
-    branches: ["main", "develop"]
+    branches: [ "main", "develop" ]
   pull_request:
-    branches: ["main", "develop"]
+    branches: [ "main", "develop" ]
 
 permissions:
   contents: read
@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [api-gateway, auth-service, catalog-service, order-service, payment-service]
+        service: [ api-gateway, auth-service, catalog-service, order-service, payment-service ]
     permissions:
       contents: read
     steps:
@@ -102,11 +102,11 @@ jobs:
 
   build-docker:
     runs-on: ubuntu-latest
-    needs: [build-matrix, frontend-build, security-scan]
+    needs: [ build-matrix, frontend-build, security-scan ]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     strategy:
       matrix:
-        service: [api-gateway, auth-service, catalog-service, order-service, payment-service, frontend]
+        service: [ api-gateway, auth-service, catalog-service, order-service, payment-service, frontend ]
     permissions:
       contents: read
       packages: write
@@ -234,7 +234,9 @@ jobs:
             -GitHubRepo "${{ github.repository }}" `
             -ImageTag "${{ github.sha }}" `
             -JwtSecret "${{ secrets.JWT_SECRET }}" `
-            -MongoDbUri "${{ secrets.MONGODB_URI }}" `
+            -DatabaseUrl "${{ secrets.NEON_DATABASE_URL }}" `
+            -DatabaseUser "${{ secrets.NEON_DATABASE_USER }}" `
+            -DatabasePassword "${{ secrets.NEON_DATABASE_PASSWORD }}" `
             -GitHubUsername "${{ github.actor }}" `
             -GitHubToken "${{ secrets.GITHUB_TOKEN }}"
 
@@ -380,7 +382,7 @@ jobs:
   # ==================== FINAL REPORT ====================
   summary:
     runs-on: ubuntu-latest
-    needs: [build-matrix, frontend-build, security-scan, build-docker, deploy-to-azure, smoke-test]
+    needs: [ build-matrix, frontend-build, security-scan, build-docker, deploy-to-azure, smoke-test ]
     if: always()
     steps:
       - name: Create Pipeline Summary

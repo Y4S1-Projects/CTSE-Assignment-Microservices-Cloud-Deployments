@@ -60,7 +60,10 @@ Optional parameters:
   -ResourceGroup "ctse-assignment" `
   -EnvironmentName "ctse-assignment-env" `
   -Location "eastus" `
-  -ImageTag "latest"
+  -ImageTag "latest" `
+  -DatabaseUrl "jdbc:postgresql://ep-bitter-heart-aogzv7s0.c-2.ap-southeast-1.aws.neon.tech:5432/neondb?sslmode=require" `
+  -DatabaseUser "neondb_owner" `
+  -DatabasePassword "<your-neon-db-password>"
 ```
 
 ## GitHub Actions Flow
@@ -73,6 +76,13 @@ When code is pushed to `main`, the workflow now:
 - deploys with the same low-cost settings when `AZURE_CREDENTIALS` is configured
 
 If `AZURE_CREDENTIALS` is not configured, the pipeline still builds the images and prints the manual deployment command.
+
+For successful hosted deployment, also configure these secrets:
+
+- `JWT_SECRET`
+- `NEON_DATABASE_URL`
+- `NEON_DATABASE_USER`
+- `NEON_DATABASE_PASSWORD`
 
 ## Verification
 
