@@ -1,6 +1,7 @@
 package com.example.authservice.controller;
 
 import com.example.authservice.dto.AdminCreateUserRequest;
+import com.example.authservice.dto.AdminUpdateUserRequest;
 import com.example.authservice.dto.UpdateUserStatusRequest;
 import com.example.authservice.dto.UserProfileResponse;
 import com.example.authservice.entity.Role;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -27,11 +29,10 @@ public class AdminController {
     private PasswordEncoder passwordEncoder;
 
     @PostMapping
-    public ResponseEntity<UserProfileResponse> createUser(@RequestBody AdminCreateUserRequest request) {
+    public ResponseEntity<UserProfileResponse> createUser(@Valid @RequestBody AdminCreateUserRequest request) {
         Role role = request.getRole() == null ? Role.CUSTOMER : request.getRole();
 
         User saved = userRepository.save(User.builder()
-                .username(request.getUsername())
                 .email(request.getEmail())
                 .fullName(request.getFullName())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
@@ -55,9 +56,37 @@ public class AdminController {
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<UserProfileResponse> updateStatus(@PathVariable String id, @RequestBody UpdateUserStatusRequest request) {
+    public ResponseEntity<UserProfileResponse> updateStatus(@PathVariable String id, @Valid @RequestBody UpdateUserStatusRequest request) {
         User user = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
         user.setActive(request.isActive());
+        return ResponseEntity.ok(toProfile(userRepository.save(user)));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<UserProfileResponse> updateUser(@PathVariable String id, @Valid @RequestBody AdminUpdateUserRequest request) {
+        User user = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+            userRepository.findByEmail(request.getEmail())
+                    .filter(existing -> !existing.getId().equals(user.getId()))
+                    .ifPresent(existing -> {
+                        throw new IllegalArgumentException("Email already in use");
+                    });
+            user.setEmail(request.getEmail());
+        }
+
+        if (request.getFullName() != null && !request.getFullName().isBlank()) {
+            user.setFullName(request.getFullName());
+        }
+
+        if (request.getRole() != null) {
+            user.setRole(request.getRole());
+        }
+
+        if (request.getActive() != null) {
+            user.setActive(request.getActive());
+        }
+
         return ResponseEntity.ok(toProfile(userRepository.save(user)));
     }
 
@@ -70,7 +99,6 @@ public class AdminController {
     private UserProfileResponse toProfile(User user) {
         return UserProfileResponse.builder()
                 .id(user.getId())
-                .username(user.getUsername())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .role(user.getRole())

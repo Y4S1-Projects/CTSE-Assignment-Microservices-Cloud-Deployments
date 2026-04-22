@@ -9,6 +9,10 @@ services:
       - "8080:8080"
     environment:
       - JWT_SECRET=your-super-secret-key-change-in-production-env
+      - AUTH_SERVICE_URL=http://auth-service:8081
+      - CATALOG_SERVICE_URL=http://catalog-service:8082
+      - ORDER_SERVICE_URL=http://order-service:8083
+      - PAYMENT_SERVICE_URL=http://payment-service:8084
     depends_on:
       - auth-service
       - catalog-service
@@ -17,7 +21,8 @@ services:
     networks:
       - microservices-network
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8080/actuator/health"]
+      test:
+        ["CMD", "wget", "-q", "-O-", "http://localhost:8080/actuator/health"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -37,7 +42,8 @@ services:
     networks:
       - microservices-network
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8081/actuator/health"]
+      test:
+        ["CMD", "wget", "-q", "-O-", "http://localhost:8081/actuator/health"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -60,7 +66,8 @@ services:
     networks:
       - microservices-network
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8082/actuator/health"]
+      test:
+        ["CMD", "wget", "-q", "-O-", "http://localhost:8082/actuator/health"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -86,7 +93,8 @@ services:
     networks:
       - microservices-network
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8083/actuator/health"]
+      test:
+        ["CMD", "wget", "-q", "-O-", "http://localhost:8083/actuator/health"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -111,7 +119,8 @@ services:
     networks:
       - microservices-network
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8084/actuator/health"]
+      test:
+        ["CMD", "wget", "-q", "-O-", "http://localhost:8084/actuator/health"]
       interval: 30s
       timeout: 3s
       retries: 3

@@ -55,7 +55,6 @@ class UserControllerIntegrationTest {
     private LoginResponse registerCustomer() {
         String uid = UUID.randomUUID().toString().replace("-", "").substring(0, 10);
         RegisterRequest req = RegisterRequest.builder()
-                .username("cust_" + uid)
                 .email("cust_" + uid + "@test.com")
                 .password("Password1!")
                 .fullName("Customer " + uid)
@@ -77,10 +76,9 @@ class UserControllerIntegrationTest {
         ResponseEntity<Map> resp = restTemplate.exchange(url("/users/me"), HttpMethod.GET, entity, Map.class);
 
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(resp.getBody()).containsKey("username");
         assertThat(resp.getBody()).containsKey("email");
         assertThat(resp.getBody()).containsKey("role");
-        assertThat(resp.getBody().get("username")).isEqualTo(reg.getUsername());
+        assertThat(resp.getBody().get("email")).isEqualTo(reg.getEmail());
     }
 
     @Test
@@ -139,202 +137,184 @@ class UserControllerIntegrationTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // POST /users/addresses
+    // Addresses embedded in /users/profile and /users/me
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void addAddress_validRequest_returns201WithAddressData() {
+    void updateProfile_withSingleAddress_persistsInUserValues() {
         LoginResponse reg = registerCustomer();
-        AddressRequest req = new AddressRequest();
-        req.setStreet("123 Main St");
-        req.setCity("Springfield");
-        req.setPostalCode("10001");
-        req.setDefault(true);
-        HttpEntity<AddressRequest> entity = new HttpEntity<>(req, bearerHeaders(reg.getAccessToken()));
 
-        ResponseEntity<Map> resp = restTemplate.exchange(url("/users/addresses"), HttpMethod.POST, entity, Map.class);
+        AddressRequest a1 = new AddressRequest();
+        a1.setStreet("123 Main St");
+        a1.setCity("Springfield");
+        a1.setPostalCode("10001");
+        a1.setDefault(true);
 
-        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(resp.getBody().get("street")).isEqualTo("123 Main St");
-        assertThat(resp.getBody().get("city")).isEqualTo("Springfield");
-        assertThat(resp.getBody().get("postalCode")).isEqualTo("10001");
-        assertThat(resp.getBody()).containsKey("id");
+        UpdateProfileRequest req = UpdateProfileRequest.builder().addresses(List.of(a1)).build();
+        ResponseEntity<Map> updateResp = restTemplate.exchange(
+                url("/users/profile"),
+                HttpMethod.PUT,
+                new HttpEntity<>(req, bearerHeaders(reg.getAccessToken())),
+                Map.class
+        );
+
+        assertThat(updateResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        List<Map<String, Object>> addresses = (List<Map<String, Object>>) updateResp.getBody().get("addresses");
+        assertThat(addresses).hasSize(1);
+        assertThat(addresses.get(0).get("street")).isEqualTo("123 Main St");
     }
 
     @Test
-    void addAddress_unauthenticated_returns401Or403() {
-        AddressRequest req = new AddressRequest();
-        req.setStreet("1 Test");
-        req.setCity("City");
-        req.setPostalCode("00000");
-        req.setDefault(false);
-        ResponseEntity<Map> resp = restTemplate.exchange(url("/users/addresses"), HttpMethod.POST,
-                new HttpEntity<>(req), Map.class);
-        assertThat(resp.getStatusCode()).isIn(HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN);
-    }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // GET /users/addresses
-    // ══════════════════════════════════════════════════════════════════════════
-
-    @Test
-    void getAddresses_noAddresses_returnsEmptyList() {
+    void updateProfile_withThreeAddresses_succeeds() {
         LoginResponse reg = registerCustomer();
-        HttpEntity<Void> entity = new HttpEntity<>(bearerHeaders(reg.getAccessToken()));
 
-        ResponseEntity<List> resp = restTemplate.exchange(url("/users/addresses"), HttpMethod.GET, entity, List.class);
+        AddressRequest a1 = new AddressRequest();
+        a1.setStreet("A St");
+        a1.setCity("A City");
+        a1.setPostalCode("11111");
+        a1.setDefault(true);
 
-        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(resp.getBody()).isEmpty();
+        AddressRequest a2 = new AddressRequest();
+        a2.setStreet("B St");
+        a2.setCity("B City");
+        a2.setPostalCode("22222");
+        a2.setDefault(false);
+
+        AddressRequest a3 = new AddressRequest();
+        a3.setStreet("C St");
+        a3.setCity("C City");
+        a3.setPostalCode("33333");
+        a3.setDefault(false);
+
+        UpdateProfileRequest req = UpdateProfileRequest.builder().addresses(List.of(a1, a2, a3)).build();
+        ResponseEntity<Map> updateResp = restTemplate.exchange(
+                url("/users/profile"),
+                HttpMethod.PUT,
+                new HttpEntity<>(req, bearerHeaders(reg.getAccessToken())),
+                Map.class
+        );
+
+        assertThat(updateResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        List<Map<String, Object>> addresses = (List<Map<String, Object>>) updateResp.getBody().get("addresses");
+        assertThat(addresses).hasSize(3);
     }
 
     @Test
-    void getAddresses_afterAddingTwo_returnsTwoAddresses() {
+    void updateProfile_withMoreThanThreeAddresses_returns400() {
         LoginResponse reg = registerCustomer();
-        HttpHeaders h = bearerHeaders(reg.getAccessToken());
 
-        // Add first address
-        AddressRequest req1 = new AddressRequest();
-        req1.setStreet("A St");
-        req1.setCity("CityA");
-        req1.setPostalCode("11111");
-        req1.setDefault(true);
-        restTemplate.exchange(url("/users/addresses"), HttpMethod.POST,
-            new HttpEntity<>(req1, h), Map.class);
-        // Add second address
-        AddressRequest req2 = new AddressRequest();
-        req2.setStreet("B St");
-        req2.setCity("CityB");
-        req2.setPostalCode("22222");
-        req2.setDefault(false);
-        restTemplate.exchange(url("/users/addresses"), HttpMethod.POST,
-            new HttpEntity<>(req2, h), Map.class);
+        AddressRequest a1 = new AddressRequest();
+        a1.setStreet("1");
+        a1.setCity("C1");
+        a1.setPostalCode("11111");
+        a1.setDefault(true);
 
-        ResponseEntity<List> resp = restTemplate.exchange(url("/users/addresses"), HttpMethod.GET,
-                new HttpEntity<>(h), List.class);
+        AddressRequest a2 = new AddressRequest();
+        a2.setStreet("2");
+        a2.setCity("C2");
+        a2.setPostalCode("22222");
+        a2.setDefault(false);
 
-        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(resp.getBody()).hasSize(2);
-    }
+        AddressRequest a3 = new AddressRequest();
+        a3.setStreet("3");
+        a3.setCity("C3");
+        a3.setPostalCode("33333");
+        a3.setDefault(false);
 
-    @Test
-    void getAddresses_unauthenticated_returns401Or403() {
-        ResponseEntity<List> resp = restTemplate.exchange(url("/users/addresses"), HttpMethod.GET,
-                new HttpEntity<>(new HttpHeaders()), List.class);
-        assertThat(resp.getStatusCode()).isIn(HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN);
-    }
+        AddressRequest a4 = new AddressRequest();
+        a4.setStreet("4");
+        a4.setCity("C4");
+        a4.setPostalCode("44444");
+        a4.setDefault(false);
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // PUT /users/addresses/{id}
-    // ══════════════════════════════════════════════════════════════════════════
-
-    @Test
-    void updateAddress_ownAddress_returns200WithUpdatedData() {
-        LoginResponse reg = registerCustomer();
-        HttpHeaders h = bearerHeaders(reg.getAccessToken());
-
-        // Create an address
-        AddressRequest createReq = new AddressRequest();
-        createReq.setStreet("Old St");
-        createReq.setCity("Old City");
-        createReq.setPostalCode("00000");
-        createReq.setDefault(false);
-        ResponseEntity<Map> created = restTemplate.exchange(url("/users/addresses"), HttpMethod.POST,
-            new HttpEntity<>(createReq, h), Map.class);
-        String addressId = (String) created.getBody().get("id");
-
-        // Update it
-        AddressRequest update = new AddressRequest();
-        update.setStreet("New St");
-        update.setCity("New City");
-        update.setPostalCode("99999");
-        update.setDefault(false);
-        ResponseEntity<Map> resp = restTemplate.exchange(url("/users/addresses/" + addressId), HttpMethod.PUT,
-                new HttpEntity<>(update, h), Map.class);
-
-        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(resp.getBody().get("street")).isEqualTo("New St");
-        assertThat(resp.getBody().get("city")).isEqualTo("New City");
-    }
-
-    @Test
-    void updateAddress_otherUsersAddress_returns400() {
-        LoginResponse user1 = registerCustomer();
-        LoginResponse user2 = registerCustomer();
-
-        // User1 creates an address
-        AddressRequest createReq = new AddressRequest();
-        createReq.setStreet("U1 St");
-        createReq.setCity("City");
-        createReq.setPostalCode("11111");
-        createReq.setDefault(false);
-        ResponseEntity<Map> created = restTemplate.exchange(url("/users/addresses"), HttpMethod.POST,
-            new HttpEntity<>(createReq,
-                        bearerHeaders(user1.getAccessToken())), Map.class);
-        String addressId = (String) created.getBody().get("id");
-
-        // User2 tries to update user1's address
-        AddressRequest update = new AddressRequest();
-        update.setStreet("Hacked");
-        update.setCity("Evil");
-        update.setPostalCode("00000");
-        update.setDefault(false);
-        ResponseEntity<Map> resp = restTemplate.exchange(url("/users/addresses/" + addressId), HttpMethod.PUT,
-                new HttpEntity<>(update, bearerHeaders(user2.getAccessToken())), Map.class);
-
-        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST); // IllegalArgumentException → 400
-    }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // DELETE /users/addresses/{id}
-    // ══════════════════════════════════════════════════════════════════════════
-
-    @Test
-    void deleteAddress_ownAddress_returns204() {
-        LoginResponse reg = registerCustomer();
-        HttpHeaders h = bearerHeaders(reg.getAccessToken());
-
-        AddressRequest createReq = new AddressRequest();
-        createReq.setStreet("Del St");
-        createReq.setCity("City");
-        createReq.setPostalCode("55555");
-        createReq.setDefault(false);
-        ResponseEntity<Map> created = restTemplate.exchange(url("/users/addresses"), HttpMethod.POST,
-            new HttpEntity<>(createReq, h), Map.class);
-        String addressId = (String) created.getBody().get("id");
-
-        ResponseEntity<Void> respDel = restTemplate.exchange(url("/users/addresses/" + addressId),
-                HttpMethod.DELETE, new HttpEntity<>(h), Void.class);
-
-        assertThat(respDel.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-    }
-
-    @Test
-    void deleteAddress_notFound_returns400() {
-        LoginResponse reg = registerCustomer();
+        UpdateProfileRequest req = UpdateProfileRequest.builder().addresses(List.of(a1, a2, a3, a4)).build();
         ResponseEntity<Map> resp = restTemplate.exchange(
-                url("/users/addresses/00000000-0000-0000-0000-000000000000"),
-                HttpMethod.DELETE, new HttpEntity<>(bearerHeaders(reg.getAccessToken())), Map.class);
+                url("/users/profile"),
+                HttpMethod.PUT,
+                new HttpEntity<>(req, bearerHeaders(reg.getAccessToken())),
+                Map.class
+        );
+
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
-    void deleteAddress_afterDeletion_notReturnedInList() {
+    void updateProfile_withMultipleDefaults_returns400() {
         LoginResponse reg = registerCustomer();
-        HttpHeaders h = bearerHeaders(reg.getAccessToken());
 
-        AddressRequest createReq = new AddressRequest();
-        createReq.setStreet("ToDelete");
-        createReq.setCity("City");
-        createReq.setPostalCode("12345");
-        createReq.setDefault(false);
-        ResponseEntity<Map> created = restTemplate.exchange(url("/users/addresses"), HttpMethod.POST,
-            new HttpEntity<>(createReq, h), Map.class);
-        String addressId = (String) created.getBody().get("id");
+        AddressRequest a1 = new AddressRequest();
+        a1.setStreet("A St");
+        a1.setCity("A City");
+        a1.setPostalCode("11111");
+        a1.setDefault(true);
 
-        restTemplate.exchange(url("/users/addresses/" + addressId), HttpMethod.DELETE, new HttpEntity<>(h), Void.class);
+        AddressRequest a2 = new AddressRequest();
+        a2.setStreet("B St");
+        a2.setCity("B City");
+        a2.setPostalCode("22222");
+        a2.setDefault(true);
 
-        ResponseEntity<List> listResp = restTemplate.exchange(url("/users/addresses"), HttpMethod.GET, new HttpEntity<>(h), List.class);
-        assertThat(listResp.getBody()).noneMatch(a -> addressId.equals(((Map) a).get("id")));
+        UpdateProfileRequest req = UpdateProfileRequest.builder().addresses(List.of(a1, a2)).build();
+        ResponseEntity<Map> resp = restTemplate.exchange(
+                url("/users/profile"),
+                HttpMethod.PUT,
+                new HttpEntity<>(req, bearerHeaders(reg.getAccessToken())),
+                Map.class
+        );
+
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void updateProfile_replacesAddressesWhenPayloadChanges() {
+        LoginResponse reg = registerCustomer();
+        HttpHeaders headers = bearerHeaders(reg.getAccessToken());
+
+        AddressRequest oldAddress = new AddressRequest();
+        oldAddress.setStreet("Old St");
+        oldAddress.setCity("Old City");
+        oldAddress.setPostalCode("10000");
+        oldAddress.setDefault(true);
+
+        UpdateProfileRequest first = UpdateProfileRequest.builder().addresses(List.of(oldAddress)).build();
+        ResponseEntity<Map> firstResp = restTemplate.exchange(url("/users/profile"), HttpMethod.PUT, new HttpEntity<>(first, headers), Map.class);
+        List<Map<String, Object>> firstAddresses = (List<Map<String, Object>>) firstResp.getBody().get("addresses");
+        assertThat(firstAddresses).hasSize(1);
+
+        AddressRequest newAddress = new AddressRequest();
+        newAddress.setStreet("New St");
+        newAddress.setCity("New City");
+        newAddress.setPostalCode("20000");
+        newAddress.setDefault(true);
+
+        UpdateProfileRequest second = UpdateProfileRequest.builder().addresses(List.of(newAddress)).build();
+        ResponseEntity<Map> secondResp = restTemplate.exchange(url("/users/profile"), HttpMethod.PUT, new HttpEntity<>(second, headers), Map.class);
+        List<Map<String, Object>> secondAddresses = (List<Map<String, Object>>) secondResp.getBody().get("addresses");
+
+        assertThat(secondAddresses).hasSize(1);
+        assertThat(secondAddresses.get(0).get("street")).isEqualTo("New St");
+    }
+
+    @Test
+    void getMe_returnsAddressesEmbeddedInProfile() {
+        LoginResponse reg = registerCustomer();
+        HttpHeaders headers = bearerHeaders(reg.getAccessToken());
+
+        AddressRequest a1 = new AddressRequest();
+        a1.setStreet("Embedded St");
+        a1.setCity("Embedded City");
+        a1.setPostalCode("90909");
+        a1.setDefault(true);
+
+        UpdateProfileRequest req = UpdateProfileRequest.builder().addresses(List.of(a1)).build();
+        restTemplate.exchange(url("/users/profile"), HttpMethod.PUT, new HttpEntity<>(req, headers), Map.class);
+
+        ResponseEntity<Map> meResp = restTemplate.exchange(url("/users/me"), HttpMethod.GET, new HttpEntity<>(headers), Map.class);
+        assertThat(meResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        List<Map<String, Object>> addresses = (List<Map<String, Object>>) meResp.getBody().get("addresses");
+        assertThat(addresses).hasSize(1);
+        assertThat(addresses.get(0).get("street")).isEqualTo("Embedded St");
+        assertThat(meResp.getBody()).containsKey("primaryAddress");
     }
 }

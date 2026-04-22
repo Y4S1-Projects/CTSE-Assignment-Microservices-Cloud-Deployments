@@ -25,6 +25,10 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.LocalDateTime;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -51,6 +55,8 @@ public class AuthServiceImpl implements AuthService {
 
     @Value("${app.auth.refresh-expiry-days:7}")
     private int refreshExpiryDays;
+
+    private static final int MIN_PASSWORD_LENGTH = 6;
 
     @Override
     public LoginResponse login(LoginRequest request) {
@@ -83,22 +89,12 @@ public class AuthServiceImpl implements AuthService {
         if (request.getPassword() == null || request.getPassword().length() < 6) {
             throw new IllegalArgumentException("Password must be at least 6 characters");
         }
-        if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
-            throw new IllegalArgumentException("Username is required");
-        }
-
         Optional<User> existingUserByEmail = userRepository.findByEmail(request.getEmail());
         if (existingUserByEmail.isPresent()) {
             throw new UserAlreadyExistsException("User with this email already exists");
         }
 
-        Optional<User> existingUserByUsername = userRepository.findByUsername(request.getUsername());
-        if (existingUserByUsername.isPresent()) {
-            throw new UserAlreadyExistsException("User with this username already exists");
-        }
-
         User savedUser = userRepository.save(User.builder()
-                .username(request.getUsername())
                 .email(request.getEmail())
                 .fullName(request.getFullName())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
@@ -134,11 +130,34 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void changePassword(String username, ChangePasswordRequest request) {
-        User user = getUserByUsername(username);
+    public void logout(String email, RefreshRequest request) {
+        User currentUser = getUserByEmail(email);
+
+        RefreshToken refreshToken = refreshTokenRepository.findByTokenAndRevokedFalse(request.getRefreshToken())
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid refresh token"));
+
+        if (!currentUser.getId().equals(refreshToken.getUserId())) {
+            throw new InvalidCredentialsException("Session does not match refresh token");
+        }
+
+        refreshToken.setRevoked(true);
+        refreshTokenRepository.save(refreshToken);
+    }
+
+    @Override
+    public void changePassword(String email, ChangePasswordRequest request) {
+        User user = getUserByEmail(email);
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
             throw new InvalidCredentialsException("Old password is incorrect");
+        }
+
+        if (request.getNewPassword() == null || request.getNewPassword().length() < MIN_PASSWORD_LENGTH) {
+            throw new IllegalArgumentException("New password must be at least 6 characters");
+        }
+
+        if (request.getOldPassword().equals(request.getNewPassword())) {
+            throw new IllegalArgumentException("New password must be different from old password");
         }
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
@@ -151,24 +170,30 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new InvalidCredentialsException("No user found for email"));
 
+        String rawToken = UUID.randomUUID().toString();
+
         PasswordResetToken resetToken = PasswordResetToken.builder()
                 .userId(user.getId())
-                .token(UUID.randomUUID().toString())
+            .token(hashResetToken(rawToken))
                 .expiryDate(LocalDateTime.now().plusMinutes(30))
                 .used(false)
                 .build();
 
         passwordResetTokenRepository.save(resetToken);
-        return resetToken.getToken();
+        return rawToken;
     }
 
     @Override
     public void resetPassword(ResetPasswordRequest request) {
-        PasswordResetToken token = passwordResetTokenRepository.findByTokenAndUsedFalse(request.getToken())
+        PasswordResetToken token = passwordResetTokenRepository.findByTokenAndUsedFalse(hashResetToken(request.getToken()))
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid reset token"));
 
         if (token.getExpiryDate().isBefore(LocalDateTime.now())) {
             throw new InvalidCredentialsException("Reset token expired");
+        }
+
+        if (request.getNewPassword() == null || request.getNewPassword().length() < MIN_PASSWORD_LENGTH) {
+            throw new IllegalArgumentException("New password must be at least 6 characters");
         }
 
         User user = userRepository.findById(token.getUserId())
@@ -179,6 +204,16 @@ public class AuthServiceImpl implements AuthService {
 
         token.setUsed(true);
         passwordResetTokenRepository.save(token);
+    }
+
+    private String hashResetToken(String rawToken) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 algorithm not available", ex);
+        }
     }
 
     @Override
@@ -192,8 +227,8 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public String extractUsername(String token) {
-        return jwtTokenProvider.extractUsername(token);
+    public String extractEmail(String token) {
+        return jwtTokenProvider.extractEmail(token);
     }
 
     @Override
@@ -202,13 +237,13 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public User getUserByUsername(String username) {
-        return userRepository.findByUsername(username)
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
                 .orElseThrow(() -> new InvalidCredentialsException("User not found"));
     }
 
     private LoginResponse issueTokens(User user) {
-        String accessToken = jwtTokenProvider.generateToken(user.getId(), user.getUsername(), user.getRole().name());
+        String accessToken = jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole().name());
 
         String refreshTokenValue = UUID.randomUUID().toString();
         RefreshToken refreshToken = RefreshToken.builder()
@@ -224,7 +259,7 @@ public class AuthServiceImpl implements AuthService {
                 .token(accessToken)
                 .accessToken(accessToken)
                 .refreshToken(refreshTokenValue)
-                .username(user.getUsername())
+            .email(user.getEmail())
                 .userId(user.getId())
                 .role(user.getRole())
                 .build();

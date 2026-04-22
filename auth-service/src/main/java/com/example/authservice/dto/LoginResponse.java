@@ -20,8 +20,8 @@ public class LoginResponse {
     @Schema(description = "Refresh token (long-lived)", example = "2f2d45d5-cde7-4c26-b6a4-cf7f39f2ad03")
     private String refreshToken;
     
-    @Schema(description = "Username", example = "john.doe")
-    private String username;
+    @Schema(description = "User email", example = "john.doe@example.com")
+    private String email;
     
     @Schema(description = "User unique identifier (UUID)", example = "550e8400-e29b-41d4-a716-446655440000")
     private String userId;

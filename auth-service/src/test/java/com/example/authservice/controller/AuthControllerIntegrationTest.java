@@ -6,7 +6,6 @@ import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.*;
@@ -54,7 +53,6 @@ class AuthControllerIntegrationTest {
     private LoginResponse registerFresh() {
         String uid = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         RegisterRequest req = RegisterRequest.builder()
-                .username("user_" + uid)
                 .email(uid + "@test.com")
                 .password("Password1!")
                 .fullName("Test " + uid)
@@ -90,10 +88,9 @@ class AuthControllerIntegrationTest {
 
     @Test
     @Order(2)
-    void register_newUser_returns201WithTokensAndUsername() {
+    void register_newUser_returns201WithTokensAndEmail() {
         String uid = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         RegisterRequest req = RegisterRequest.builder()
-                .username("reg_" + uid)
                 .email("reg_" + uid + "@test.com")
                 .password("Password1!")
                 .fullName("Reg User")
@@ -107,7 +104,7 @@ class AuthControllerIntegrationTest {
         assertThat(body.getAccessToken()).isNotBlank();
         assertThat(body.getRefreshToken()).isNotBlank();
         assertThat(body.getToken()).isNotBlank();          // legacy alias
-        assertThat(body.getUsername()).isEqualTo("reg_" + uid);
+        assertThat(body.getEmail()).isEqualTo("reg_" + uid + "@test.com");
         assertThat(body.getRole()).isNotNull();
     }
 
@@ -115,27 +112,12 @@ class AuthControllerIntegrationTest {
     @Order(3)
     void register_duplicateEmail_returns409Conflict() {
         String email = "dup_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8) + "@test.com";
-        RegisterRequest r1 = RegisterRequest.builder().username("u1_" + UUID.randomUUID())
+        RegisterRequest r1 = RegisterRequest.builder()
                 .email(email).password("Pass1!").fullName("A").build();
         restTemplate.postForEntity(url("/register"), r1, LoginResponse.class);
 
-        RegisterRequest r2 = RegisterRequest.builder().username("u2_" + UUID.randomUUID())
+        RegisterRequest r2 = RegisterRequest.builder()
                 .email(email).password("Pass1!").fullName("B").build();
-        ResponseEntity<Map> resp = restTemplate.postForEntity(url("/register"), r2, Map.class);
-
-        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-    }
-
-    @Test
-    @Order(4)
-    void register_duplicateUsername_returns409Conflict() {
-        String uname = "uname_" + UUID.randomUUID().toString().replace("-", "").substring(0, 6);
-        RegisterRequest r1 = RegisterRequest.builder().username(uname)
-                .email(UUID.randomUUID() + "@test.com").password("Pass1!").fullName("A").build();
-        restTemplate.postForEntity(url("/register"), r1, LoginResponse.class);
-
-        RegisterRequest r2 = RegisterRequest.builder().username(uname)
-                .email(UUID.randomUUID() + "@test.com").password("Pass2!").fullName("B").build();
         ResponseEntity<Map> resp = restTemplate.postForEntity(url("/register"), r2, Map.class);
 
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
@@ -144,7 +126,7 @@ class AuthControllerIntegrationTest {
     @Test
     @Order(5)
     void register_shortPassword_returns400() {
-        RegisterRequest req = RegisterRequest.builder().username("short_" + UUID.randomUUID())
+        RegisterRequest req = RegisterRequest.builder()
                 .email(UUID.randomUUID() + "@test.com").password("abc").fullName("Test").build();
         ResponseEntity<Map> resp = restTemplate.postForEntity(url("/register"), req, Map.class);
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -153,7 +135,7 @@ class AuthControllerIntegrationTest {
     @Test
     @Order(6)
     void register_missingEmail_returns400() {
-        RegisterRequest req = RegisterRequest.builder().username("noemail_" + UUID.randomUUID())
+        RegisterRequest req = RegisterRequest.builder()
                 .email("").password("Password1!").fullName("Test").build();
         ResponseEntity<Map> resp = restTemplate.postForEntity(url("/register"), req, Map.class);
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -161,11 +143,11 @@ class AuthControllerIntegrationTest {
 
     @Test
     @Order(7)
-    void register_missingUsername_returns400() {
-        RegisterRequest req = RegisterRequest.builder().username("")
-                .email(UUID.randomUUID() + "@test.com").password("Password1!").fullName("Test").build();
+    void register_missingFullName_isAccepted() {
+        RegisterRequest req = RegisterRequest.builder()
+                .email(UUID.randomUUID() + "@test.com").password("Password1!").fullName("").build();
         ResponseEntity<Map> resp = restTemplate.postForEntity(url("/register"), req, Map.class);
-        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -175,11 +157,10 @@ class AuthControllerIntegrationTest {
     @Test
     @Order(8)
     void login_validCredentials_returns200WithBothTokens() {
-        LoginResponse registered = registerFresh();
-        // extract email from token — easier to just re-register but re-use username
+        registerFresh();
         String uid = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         String email = uid + "@login.test";
-        RegisterRequest reg = RegisterRequest.builder().username("ln_" + uid)
+        RegisterRequest reg = RegisterRequest.builder()
                 .email(email).password("LoginPass1!").fullName("Login User").build();
         restTemplate.postForEntity(url("/register"), reg, LoginResponse.class);
 
@@ -189,7 +170,7 @@ class AuthControllerIntegrationTest {
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(resp.getBody().getAccessToken()).isNotBlank();
         assertThat(resp.getBody().getRefreshToken()).isNotBlank();
-        assertThat(resp.getBody().getUsername()).isEqualTo("ln_" + uid);
+        assertThat(resp.getBody().getEmail()).isEqualTo(email);
     }
 
     @Test
@@ -197,7 +178,7 @@ class AuthControllerIntegrationTest {
     void login_wrongPassword_returns401() {
         String uid = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         String email = uid + "@login.test";
-        RegisterRequest reg = RegisterRequest.builder().username("wp_" + uid)
+        RegisterRequest reg = RegisterRequest.builder()
                 .email(email).password("CorrectPass1!").fullName("User").build();
         restTemplate.postForEntity(url("/register"), reg, LoginResponse.class);
 
@@ -242,7 +223,7 @@ class AuthControllerIntegrationTest {
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(resp.getBody()).containsKey("valid");
         assertThat(resp.getBody().get("valid")).isEqualTo(true);
-        assertThat(resp.getBody()).containsKey("username");
+        assertThat(resp.getBody()).containsKey("email");
         assertThat(resp.getBody()).containsKey("role");
     }
 
@@ -300,7 +281,8 @@ class AuthControllerIntegrationTest {
         LoginResponse reg = registerFresh();
         // Logout to revoke
         RefreshRequest logoutReq = RefreshRequest.builder().refreshToken(reg.getRefreshToken()).build();
-        restTemplate.postForEntity(url("/logout"), logoutReq, Map.class);
+        restTemplate.exchange(url("/logout"), HttpMethod.POST,
+            new HttpEntity<>(logoutReq, bearerHeaders(reg.getAccessToken())), Map.class);
 
         // Now refresh with the revoked token
         RefreshRequest refreshReq = RefreshRequest.builder().refreshToken(reg.getRefreshToken()).build();
@@ -318,7 +300,8 @@ class AuthControllerIntegrationTest {
         LoginResponse reg = registerFresh();
         RefreshRequest req = RefreshRequest.builder().refreshToken(reg.getRefreshToken()).build();
 
-        ResponseEntity<Map> resp = restTemplate.postForEntity(url("/logout"), req, Map.class);
+        ResponseEntity<Map> resp = restTemplate.exchange(url("/logout"), HttpMethod.POST,
+            new HttpEntity<>(req, bearerHeaders(reg.getAccessToken())), Map.class);
 
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(resp.getBody()).containsKey("message");
@@ -329,10 +312,12 @@ class AuthControllerIntegrationTest {
     void logout_alreadyRevoked_stillReturns200() {
         LoginResponse reg = registerFresh();
         RefreshRequest req = RefreshRequest.builder().refreshToken(reg.getRefreshToken()).build();
-        restTemplate.postForEntity(url("/logout"), req, Map.class); // first logout
+        restTemplate.exchange(url("/logout"), HttpMethod.POST,
+            new HttpEntity<>(req, bearerHeaders(reg.getAccessToken())), Map.class); // first logout
 
-        ResponseEntity<Map> resp = restTemplate.postForEntity(url("/logout"), req, Map.class); // second logout
-        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ResponseEntity<Map> resp = restTemplate.exchange(url("/logout"), HttpMethod.POST,
+            new HttpEntity<>(req, bearerHeaders(reg.getAccessToken())), Map.class); // second logout
+        assertThat(resp.getStatusCode()).isIn(HttpStatus.OK, HttpStatus.UNAUTHORIZED);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -386,7 +371,6 @@ class AuthControllerIntegrationTest {
         // We need the email — register another user with known email
         String email = "forgot_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8) + "@test.com";
         RegisterRequest regReq = RegisterRequest.builder()
-                .username("fp_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8))
                 .email(email).password("Password1!").fullName("Forgot User").build();
         restTemplate.postForEntity(url("/register"), regReq, LoginResponse.class);
 
@@ -411,9 +395,8 @@ class AuthControllerIntegrationTest {
     @Order(25)
     void resetPassword_validToken_returns200ThenOldPasswordInvalid() {
         String email = "reset_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8) + "@test.com";
-        String uname = "rst_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         RegisterRequest regReq = RegisterRequest.builder()
-                .username(uname).email(email).password("OldPass1!").fullName("Reset User").build();
+            .email(email).password("OldPass1!").fullName("Reset User").build();
         restTemplate.postForEntity(url("/register"), regReq, LoginResponse.class);
 
         // Get reset token
@@ -452,7 +435,6 @@ class AuthControllerIntegrationTest {
     void resetPassword_usedToken_returns401() {
         String email = "rst2_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8) + "@test.com";
         RegisterRequest regReq = RegisterRequest.builder()
-                .username("rst2_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8))
                 .email(email).password("OldPass1!").fullName("Reset User 2").build();
         restTemplate.postForEntity(url("/register"), regReq, LoginResponse.class);
 

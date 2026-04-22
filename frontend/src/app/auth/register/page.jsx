@@ -11,7 +11,6 @@ export default function RegisterPage() {
 	const router = useRouter();
 	const [form, setForm] = useState({
 		fullName: "",
-		username: "",
 		email: "",
 		password: "",
 	});
@@ -46,12 +45,6 @@ export default function RegisterPage() {
 						label='Full Name'
 						value={form.fullName}
 						onChange={(event) => setForm((prev) => ({ ...prev, fullName: event.target.value }))}
-						required
-					/>
-					<Input
-						label='Username'
-						value={form.username}
-						onChange={(event) => setForm((prev) => ({ ...prev, username: event.target.value }))}
 						required
 					/>
 					<Input

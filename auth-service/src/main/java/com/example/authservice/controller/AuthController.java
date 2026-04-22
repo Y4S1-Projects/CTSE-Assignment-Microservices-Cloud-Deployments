@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,6 +23,7 @@ import com.example.authservice.dto.ForgotPasswordRequest;
 import com.example.authservice.dto.ResetPasswordRequest;
 import com.example.authservice.service.AuthService;
 import org.springframework.security.core.Authentication;
+import jakarta.validation.Valid;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -55,7 +55,7 @@ public class AuthController {
         @ApiResponse(responseCode = "401", description = "Invalid credentials"),
         @ApiResponse(responseCode = "400", description = "Bad request")
     })
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         logger.info("Login request received for: {}", request.getEmail());
         LoginResponse response = authService.login(request);
         return ResponseEntity.ok(response);
@@ -72,37 +72,37 @@ public class AuthController {
         @ApiResponse(responseCode = "409", description = "User already exists"),
         @ApiResponse(responseCode = "400", description = "Invalid request data")
     })
-    public ResponseEntity<LoginResponse> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
         logger.info("Registration request received for: {}", request.getEmail());
         LoginResponse response = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<LoginResponse> refresh(@RequestBody RefreshRequest request) {
+    public ResponseEntity<LoginResponse> refresh(@Valid @RequestBody RefreshRequest request) {
         return ResponseEntity.ok(authService.refresh(request));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, String>> logout(@RequestBody RefreshRequest request) {
-        authService.logout(request);
+    public ResponseEntity<Map<String, String>> logout(Authentication authentication, @Valid @RequestBody RefreshRequest request) {
+        authService.logout(authentication.getName(), request);
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 
     @PostMapping("/change-password")
-    public ResponseEntity<Map<String, String>> changePassword(Authentication authentication, @RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<Map<String, String>> changePassword(Authentication authentication, @Valid @RequestBody ChangePasswordRequest request) {
         authService.changePassword(authentication.getName(), request);
         return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+    public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         String token = authService.forgotPassword(request);
         return ResponseEntity.ok(Map.of("resetToken", token));
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody ResetPasswordRequest request) {
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
         return ResponseEntity.ok(Map.of("message", "Password reset successfully"));
     }
@@ -116,28 +116,16 @@ public class AuthController {
         @ApiResponse(responseCode = "200", description = "Token is valid"),
         @ApiResponse(responseCode = "401", description = "Token is invalid or expired")
     })
-    public ResponseEntity<Map<String, Object>> validateToken(@RequestHeader(value = "Authorization", required = false) String authHeader) {
-        logger.debug("Token validation request received");
-        
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("valid", false, "message", "Invalid authorization header"));
-        }
+    public ResponseEntity<Map<String, Object>> validateToken(Authentication authentication) {
+        logger.debug("Session validation request received for {}", authentication.getName());
 
-        String token = authHeader.substring(7);
-        boolean isValid = authService.validateToken(token);
-
-        if (isValid) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("valid", true);
-            response.put("userId", authService.extractUserId(token));
-            response.put("username", authService.extractUsername(token));
-            response.put("role", authService.extractRole(token));
-            return ResponseEntity.ok(response);
-        } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("valid", false, "message", "Invalid or expired token"));
-        }
+        var user = authService.getUserByEmail(authentication.getName());
+        Map<String, Object> response = new HashMap<>();
+        response.put("valid", true);
+        response.put("userId", user.getId());
+        response.put("email", user.getEmail());
+        response.put("role", user.getRole());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/health")

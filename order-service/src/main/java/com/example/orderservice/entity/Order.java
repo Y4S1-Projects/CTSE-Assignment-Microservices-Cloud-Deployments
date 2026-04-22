@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "orders")
@@ -23,6 +25,10 @@ public class Order {
 
     @Column(length = 50)
     private String status;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<OrderItem> items = new ArrayList<>();
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

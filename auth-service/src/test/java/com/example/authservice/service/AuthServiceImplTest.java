@@ -13,7 +13,11 @@ import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.HexFormat;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -39,7 +43,6 @@ class AuthServiceImplTest {
     void setUpUser() {
         activeUser = User.builder()
                 .id("user-123")
-                .username("alice")
                 .email("alice@example.com")
                 .passwordHash("hashed_pw")
                 .role(Role.CUSTOMER)
@@ -65,7 +68,7 @@ class AuthServiceImplTest {
 
         assertThat(resp).isNotNull();
         assertThat(resp.getAccessToken()).isEqualTo("mock_access_token");
-        assertThat(resp.getUsername()).isEqualTo("alice");
+                assertThat(resp.getEmail()).isEqualTo("alice@example.com");
         verify(auditService).log(eq("user-123"), eq("LOGIN_SUCCESS"), any());
     }
 
@@ -110,18 +113,17 @@ class AuthServiceImplTest {
     @Test
     void register_newUser_savesUserAndReturnsTokens() {
         when(userRepository.findByEmail("bob@example.com")).thenReturn(Optional.empty());
-        when(userRepository.findByUsername("bob")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("password1")).thenReturn("hashed_pw1");
-        User saved = User.builder().id("user-456").username("bob").email("bob@example.com")
+        User saved = User.builder().id("user-456").email("bob@example.com")
                 .role(Role.CUSTOMER).active(true).build();
         when(userRepository.save(any(User.class))).thenReturn(saved);
 
         LoginResponse resp = authService.register(
-                RegisterRequest.builder().username("bob").email("bob@example.com")
+                RegisterRequest.builder().email("bob@example.com")
                         .password("password1").fullName("Bob Smith").build());
 
         assertThat(resp).isNotNull();
-        assertThat(resp.getUsername()).isEqualTo("bob");
+        assertThat(resp.getEmail()).isEqualTo("bob@example.com");
         verify(userRepository).save(any(User.class));
     }
 
@@ -130,28 +132,16 @@ class AuthServiceImplTest {
         when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(activeUser));
 
         assertThatThrownBy(() ->
-                authService.register(RegisterRequest.builder().username("newuser")
+                authService.register(RegisterRequest.builder()
                         .email("alice@example.com").password("password1").fullName("New").build()))
                 .isInstanceOf(UserAlreadyExistsException.class)
                 .hasMessageContaining("email");
     }
 
     @Test
-    void register_duplicateUsername_throwsUserAlreadyExists() {
-        when(userRepository.findByEmail("new@example.com")).thenReturn(Optional.empty());
-        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(activeUser));
-
-        assertThatThrownBy(() ->
-                authService.register(RegisterRequest.builder().username("alice")
-                        .email("new@example.com").password("password1").fullName("New").build()))
-                .isInstanceOf(UserAlreadyExistsException.class)
-                .hasMessageContaining("username");
-    }
-
-    @Test
     void register_nullEmail_throwsIllegalArgument() {
         assertThatThrownBy(() ->
-                authService.register(RegisterRequest.builder().username("x")
+                authService.register(RegisterRequest.builder()
                         .email(null).password("password1").fullName("X").build()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Email is required");
@@ -160,19 +150,19 @@ class AuthServiceImplTest {
     @Test
     void register_shortPassword_throwsIllegalArgument() {
         assertThatThrownBy(() ->
-                authService.register(RegisterRequest.builder().username("x")
+                authService.register(RegisterRequest.builder()
                         .email("x@test.com").password("abc").fullName("X").build()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("at least 6 characters");
     }
 
     @Test
-    void register_blankUsername_throwsIllegalArgument() {
+    void register_blankEmail_throwsIllegalArgument() {
         assertThatThrownBy(() ->
-                authService.register(RegisterRequest.builder().username("   ")
-                        .email("x@test.com").password("password1").fullName("X").build()))
+                authService.register(RegisterRequest.builder()
+                        .email("   ").password("password1").fullName("X").build()))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Username is required");
+                .hasMessageContaining("Email is required");
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -252,12 +242,12 @@ class AuthServiceImplTest {
 
     @Test
     void changePassword_correctOldPassword_savesNewHash() {
-        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(activeUser));
+                when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(activeUser));
         when(passwordEncoder.matches("old_pw", "hashed_pw")).thenReturn(true);
         when(passwordEncoder.encode("new_pw")).thenReturn("new_hashed");
         when(userRepository.save(any())).thenReturn(activeUser);
 
-        authService.changePassword("alice",
+                authService.changePassword("alice@example.com",
                 ChangePasswordRequest.builder().oldPassword("old_pw").newPassword("new_pw").build());
 
         verify(userRepository).save(argThat(u -> "new_hashed".equals(u.getPasswordHash())));
@@ -266,11 +256,11 @@ class AuthServiceImplTest {
 
     @Test
     void changePassword_wrongOldPassword_throwsInvalidCredentials() {
-        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(activeUser));
+        when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(activeUser));
         when(passwordEncoder.matches("bad_pw", "hashed_pw")).thenReturn(false);
 
         assertThatThrownBy(() ->
-                authService.changePassword("alice",
+                authService.changePassword("alice@example.com",
                         ChangePasswordRequest.builder().oldPassword("bad_pw").newPassword("new_pw").build()))
                 .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessageContaining("Old password is incorrect");
@@ -300,16 +290,15 @@ class AuthServiceImplTest {
                 authService.forgotPassword(ForgotPasswordRequest.builder().email("ghost@example.com").build()))
                 .isInstanceOf(InvalidCredentialsException.class);
     }
-
     @Test
     void resetPassword_validToken_changesPassword() {
         PasswordResetToken prt = PasswordResetToken.builder()
-                .token("rt-abc")
+                .token(hashToken("rt-abc"))
                 .userId(activeUser.getId())
                 .expiryDate(LocalDateTime.now().plusMinutes(30))
                 .used(false)
                 .build();
-        when(passwordResetTokenRepository.findByTokenAndUsedFalse("rt-abc")).thenReturn(Optional.of(prt));
+        when(passwordResetTokenRepository.findByTokenAndUsedFalse(hashToken("rt-abc"))).thenReturn(Optional.of(prt));
         when(userRepository.findById(activeUser.getId())).thenReturn(Optional.of(activeUser));
         when(passwordEncoder.encode("new_pw")).thenReturn("new_hashed");
         when(userRepository.save(any())).thenReturn(activeUser);
@@ -325,7 +314,7 @@ class AuthServiceImplTest {
 
     @Test
     void resetPassword_invalidToken_throwsInvalidCredentials() {
-        when(passwordResetTokenRepository.findByTokenAndUsedFalse("bad")).thenReturn(Optional.empty());
+        when(passwordResetTokenRepository.findByTokenAndUsedFalse(hashToken("bad"))).thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
                 authService.resetPassword(
@@ -337,12 +326,12 @@ class AuthServiceImplTest {
     @Test
     void resetPassword_expiredToken_throwsInvalidCredentials() {
         PasswordResetToken expired = PasswordResetToken.builder()
-                .token("exp-rt")
+                .token(hashToken("exp-rt"))
                 .userId(activeUser.getId())
                 .expiryDate(LocalDateTime.now().minusMinutes(1))
                 .used(false)
                 .build();
-        when(passwordResetTokenRepository.findByTokenAndUsedFalse("exp-rt")).thenReturn(Optional.of(expired));
+        when(passwordResetTokenRepository.findByTokenAndUsedFalse(hashToken("exp-rt"))).thenReturn(Optional.of(expired));
 
         assertThatThrownBy(() ->
                 authService.resetPassword(
@@ -362,9 +351,9 @@ class AuthServiceImplTest {
     }
 
     @Test
-    void extractUsername_delegatesToJwtProvider() {
-        when(jwtTokenProvider.extractUsername("tok")).thenReturn("alice");
-        assertThat(authService.extractUsername("tok")).isEqualTo("alice");
+        void extractEmail_delegatesToJwtProvider() {
+                when(jwtTokenProvider.extractEmail("tok")).thenReturn("alice@example.com");
+                assertThat(authService.extractEmail("tok")).isEqualTo("alice@example.com");
     }
 
     @Test
@@ -374,16 +363,24 @@ class AuthServiceImplTest {
     }
 
     @Test
-    void getUserByUsername_existingUser_returnsUser() {
-        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(activeUser));
-        User result = authService.getUserByUsername("alice");
-        assertThat(result.getUsername()).isEqualTo("alice");
+        void getUserByEmail_existingUser_returnsUser() {
+                when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(activeUser));
+                User result = authService.getUserByEmail("alice@example.com");
+                assertThat(result.getEmail()).isEqualTo("alice@example.com");
     }
 
     @Test
-    void getUserByUsername_unknownUser_throwsInvalidCredentials() {
-        when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> authService.getUserByUsername("ghost"))
+        void getUserByEmail_unknownUser_throwsInvalidCredentials() {
+                when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+                assertThatThrownBy(() -> authService.getUserByEmail("ghost@example.com"))
                 .isInstanceOf(InvalidCredentialsException.class);
     }
+        private String hashToken(String value) {
+                try {
+                        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                        return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
+                } catch (NoSuchAlgorithmException ex) {
+                        throw new RuntimeException(ex);
+                }
+        }
 }

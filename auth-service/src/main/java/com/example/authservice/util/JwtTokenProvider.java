@@ -29,22 +29,22 @@ public class JwtTokenProvider {
     /**
      * Generate JWT token with user details
      * @param userId User ID
-     * @param username Username
+     * @param email User email
      * @param role User role
      * @return JWT token string
      */
-    public String generateToken(String userId, String username, String role) {
+    public String generateToken(String userId, String email, String role) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpiration);
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
-        claims.put("username", username);
+        claims.put("email", email);
         claims.put("role", role);
 
         return Jwts.builder()
                 .claims(claims)
-                .subject(username)
+                .subject(email)
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .issuer(jwtIssuer)
@@ -89,11 +89,11 @@ public class JwtTokenProvider {
     }
 
     /**
-     * Extract username from token
+     * Extract user email from token
      * @param token JWT token string
-     * @return Username
+     * @return User email
      */
-    public String extractUsername(String token) {
+    public String extractEmail(String token) {
         Claims claims = extractAllClaims(token);
         return claims.getSubject();
     }

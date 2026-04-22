@@ -157,7 +157,8 @@ export async function getPaymentById(id) {
 
 export async function createOrder(items) {
 	const payload = { items: items.map((item) => ({ itemId: item.id, quantity: item.quantity })) };
-	return apiRequest("/orders", { method: "POST", body: JSON.stringify(payload) });
+	// Trailing slash avoids Spring redirecting to backend :8083 (breaks CORS when using gateway :8080)
+	return apiRequest("/orders/", { method: "POST", body: JSON.stringify(payload) });
 }
 
 export async function getMyOrders() {
@@ -173,6 +174,10 @@ export async function updateOrderStatus(id, status) {
 	return apiRequest(`/orders/${id}/status?status=${encodeURIComponent(status)}`, { method: "PATCH" });
 }
 
+export async function getOrderById(id) {
+	return apiRequest(`/orders/${id}`, { method: "GET" });
+}
+
 export async function processPayment(orderId, amount) {
 	return apiRequest("/payments/checkout", {
 		method: "POST",
@@ -186,5 +191,12 @@ export async function updateMenuAvailability(id, availability) {
 
 export async function getPaymentByOrderId(orderId) {
 	return apiRequest(`/payments/order/${orderId}`, { method: "GET" });
+}
+
+export async function createStripeIntent(data) {
+	return apiRequest("/payments/stripe/create-intent", {
+		method: "POST",
+		body: JSON.stringify(data),
+	});
 }
 

@@ -17,12 +17,13 @@ public interface AuthService {
     LoginResponse register(RegisterRequest request);
     LoginResponse refresh(RefreshRequest request);
     void logout(RefreshRequest request);
-    void changePassword(String username, ChangePasswordRequest request);
+    void logout(String email, RefreshRequest request);
+    void changePassword(String email, ChangePasswordRequest request);
     String forgotPassword(ForgotPasswordRequest request);
     void resetPassword(ResetPasswordRequest request);
     boolean validateToken(String token);
     String extractUserId(String token);
-    String extractUsername(String token);
+    String extractEmail(String token);
     String extractRole(String token);
-    User getUserByUsername(String username);
+    User getUserByEmail(String email);
 }
