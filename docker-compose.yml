@@ -21,8 +21,7 @@ services:
     networks:
       - microservices-network
     healthcheck:
-      test:
-        ["CMD", "wget", "-q", "-O-", "http://localhost:8080/actuator/health"]
+      test: [ "CMD", "wget", "-q", "-O-", "http://localhost:8080/actuator/health" ]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -36,14 +35,13 @@ services:
       - "8081:8081"
     environment:
       - JWT_SECRET=your-super-secret-key-change-in-production-env
-      - DATABASE_URL=jdbc:postgresql://ep-late-paper-a8qs55xj-pooler.eastus2.azure.neon.tech:5432/neondb?sslmode=require&channel_binding=require
+      - DATABASE_URL=jdbc:postgresql://ep-bitter-heart-aogzv7s0.c-2.ap-southeast-1.aws.neon.tech:5432/neondb?sslmode=require
       - DATABASE_USER=neondb_owner
-      - DATABASE_PASSWORD=npg_jCnufk2oOc3Y
+      - DATABASE_PASSWORD=npg_EcoVLd0FiD7a
     networks:
       - microservices-network
     healthcheck:
-      test:
-        ["CMD", "wget", "-q", "-O-", "http://localhost:8081/actuator/health"]
+      test: [ "CMD", "wget", "-q", "-O-", "http://localhost:8081/actuator/health" ]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -58,16 +56,15 @@ services:
     environment:
       - JWT_SECRET=your-super-secret-key-change-in-production-env
       - SERVICE_AUTH_URL=http://auth-service:8081
-      - DATABASE_URL=jdbc:postgresql://ep-late-paper-a8qs55xj-pooler.eastus2.azure.neon.tech:5432/neondb?sslmode=require&channel_binding=require
+      - DATABASE_URL=jdbc:postgresql://ep-bitter-heart-aogzv7s0.c-2.ap-southeast-1.aws.neon.tech:5432/neondb?sslmode=require
       - DATABASE_USER=neondb_owner
-      - DATABASE_PASSWORD=npg_jCnufk2oOc3Y
+      - DATABASE_PASSWORD=npg_EcoVLd0FiD7a
     depends_on:
       - auth-service
     networks:
       - microservices-network
     healthcheck:
-      test:
-        ["CMD", "wget", "-q", "-O-", "http://localhost:8082/actuator/health"]
+      test: [ "CMD", "wget", "-q", "-O-", "http://localhost:8082/actuator/health" ]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -84,17 +81,16 @@ services:
       - SERVICE_AUTH_URL=http://auth-service:8081
       - SERVICE_CATALOG_URL=http://catalog-service:8082
       - SERVICE_PAYMENT_URL=http://payment-service:8084
-      - DATABASE_URL=jdbc:postgresql://ep-late-paper-a8qs55xj-pooler.eastus2.azure.neon.tech:5432/neondb?sslmode=require&channel_binding=require
+      - DATABASE_URL=jdbc:postgresql://ep-bitter-heart-aogzv7s0.c-2.ap-southeast-1.aws.neon.tech:5432/neondb?sslmode=require
       - DATABASE_USER=neondb_owner
-      - DATABASE_PASSWORD=npg_jCnufk2oOc3Y
+      - DATABASE_PASSWORD=npg_EcoVLd0FiD7a
     depends_on:
       - auth-service
       - catalog-service
     networks:
       - microservices-network
     healthcheck:
-      test:
-        ["CMD", "wget", "-q", "-O-", "http://localhost:8083/actuator/health"]
+      test: [ "CMD", "wget", "-q", "-O-", "http://localhost:8083/actuator/health" ]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -110,17 +106,16 @@ services:
       - JWT_SECRET=your-super-secret-key-change-in-production-env
       - SERVICE_AUTH_URL=http://auth-service:8081
       - SERVICE_ORDER_URL=http://order-service:8083
-      - DATABASE_URL=jdbc:postgresql://ep-late-paper-a8qs55xj-pooler.eastus2.azure.neon.tech:5432/neondb?sslmode=require&channel_binding=require
+      - DATABASE_URL=jdbc:postgresql://ep-bitter-heart-aogzv7s0.c-2.ap-southeast-1.aws.neon.tech:5432/neondb?sslmode=require
       - DATABASE_USER=neondb_owner
-      - DATABASE_PASSWORD=npg_jCnufk2oOc3Y
+      - DATABASE_PASSWORD=npg_EcoVLd0FiD7a
     depends_on:
       - auth-service
       - order-service
     networks:
       - microservices-network
     healthcheck:
-      test:
-        ["CMD", "wget", "-q", "-O-", "http://localhost:8084/actuator/health"]
+      test: [ "CMD", "wget", "-q", "-O-", "http://localhost:8084/actuator/health" ]
       interval: 30s
       timeout: 3s
       retries: 3
