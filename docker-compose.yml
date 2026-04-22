@@ -31,9 +31,9 @@ services:
       - "8081:8081"
     environment:
       - JWT_SECRET=your-super-secret-key-change-in-production-env
-      - DATABASE_URL=jdbc:postgresql://ep-late-paper-a8qs55xj-pooler.eastus2.azure.neon.tech:5432/neondb?sslmode=require&channel_binding=require
+      - DATABASE_URL=jdbc:postgresql://ep-sweet-art-ao6w4iry-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
       - DATABASE_USER=neondb_owner
-      - DATABASE_PASSWORD=npg_jCnufk2oOc3Y
+      - DATABASE_PASSWORD=npg_80RpSBZavAdF
     networks:
       - microservices-network
     healthcheck:
@@ -52,9 +52,9 @@ services:
     environment:
       - JWT_SECRET=your-super-secret-key-change-in-production-env
       - SERVICE_AUTH_URL=http://auth-service:8081
-      - DATABASE_URL=jdbc:postgresql://ep-late-paper-a8qs55xj-pooler.eastus2.azure.neon.tech:5432/neondb?sslmode=require&channel_binding=require
+      - DATABASE_URL=jdbc:postgresql://ep-sweet-art-ao6w4iry-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
       - DATABASE_USER=neondb_owner
-      - DATABASE_PASSWORD=npg_jCnufk2oOc3Y
+      - DATABASE_PASSWORD=npg_80RpSBZavAdF
     depends_on:
       - auth-service
     networks:
@@ -77,9 +77,9 @@ services:
       - SERVICE_AUTH_URL=http://auth-service:8081
       - SERVICE_CATALOG_URL=http://catalog-service:8082
       - SERVICE_PAYMENT_URL=http://payment-service:8084
-      - DATABASE_URL=jdbc:postgresql://ep-late-paper-a8qs55xj-pooler.eastus2.azure.neon.tech:5432/neondb?sslmode=require&channel_binding=require
+      - DATABASE_URL=jdbc:postgresql://ep-sweet-art-ao6w4iry-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
       - DATABASE_USER=neondb_owner
-      - DATABASE_PASSWORD=npg_jCnufk2oOc3Y
+      - DATABASE_PASSWORD=npg_80RpSBZavAdF
     depends_on:
       - auth-service
       - catalog-service
@@ -102,9 +102,9 @@ services:
       - JWT_SECRET=your-super-secret-key-change-in-production-env
       - SERVICE_AUTH_URL=http://auth-service:8081
       - SERVICE_ORDER_URL=http://order-service:8083
-      - DATABASE_URL=jdbc:postgresql://ep-late-paper-a8qs55xj-pooler.eastus2.azure.neon.tech:5432/neondb?sslmode=require&channel_binding=require
+      - DATABASE_URL=jdbc:postgresql://ep-sweet-art-ao6w4iry-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
       - DATABASE_USER=neondb_owner
-      - DATABASE_PASSWORD=npg_jCnufk2oOc3Y
+      - DATABASE_PASSWORD=npg_80RpSBZavAdF
     depends_on:
       - auth-service
       - order-service
