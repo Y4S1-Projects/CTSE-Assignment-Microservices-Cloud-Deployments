@@ -54,7 +54,6 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private static final String[] PUBLIC_GET_PATHS = {
             "/catalog/items",
             "/catalog/categories",
-            "/catalog/dashboard",
     };
 
     @Override
@@ -157,8 +156,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             exchange.getRequest().getPath().value()
         );
         
-        return response.writeWith(Mono.fromSupplier(
-                () -> response.bufferFactory().wrap(errorJson.getBytes(StandardCharsets.UTF_8))
+        return response.writeWith(Mono.just(
+            response.bufferFactory().wrap(errorJson.getBytes(StandardCharsets.UTF_8))
         ));
     }
 

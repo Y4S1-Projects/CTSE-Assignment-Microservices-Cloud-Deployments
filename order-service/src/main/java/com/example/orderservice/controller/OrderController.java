@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
 import java.util.List;
+import java.util.Locale;
 
 
 @RestController
@@ -21,10 +22,31 @@ public class OrderController {
     @Autowired
     private OrderService orderService;
 
+    private static boolean hasRole(String rolesHeader, String role) {
+        if (rolesHeader == null || rolesHeader.isBlank()) return false;
+        String expected = role.toUpperCase(Locale.ROOT);
+        for (String token : rolesHeader.split("[,;\\s]+")) {
+            String normalized = token.trim().toUpperCase(Locale.ROOT);
+            if (normalized.isEmpty()) {
+                continue;
+            }
+            if (normalized.equals(expected) || normalized.equals("ROLE_" + expected)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean isAdmin(String rolesHeader) {
-        if (rolesHeader == null) return false;
-        String upper = rolesHeader.toUpperCase();
-        return upper.contains("ADMIN") || upper.contains("ROLE_ADMIN");
+        return hasRole(rolesHeader, "ADMIN");
+    }
+
+    private static boolean isServicePayment(String rolesHeader) {
+        return hasRole(rolesHeader, "SERVICE_PAYMENT");
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     /** POST /orders */
@@ -35,7 +57,10 @@ public class OrderController {
     public ResponseEntity<OrderResponse> createOrder(
             @RequestHeader(value = "X-User-Id", required = false) String userId,
             @Valid @RequestBody CreateOrderRequest request) {
-        String effectiveUserId = (userId == null || userId.isBlank()) ? "guest" : userId;
+        if (isBlank(userId)) {
+            return ResponseEntity.status(401).build();
+        }
+        String effectiveUserId = userId.trim();
         return ResponseEntity.status(201).body(orderService.createOrder(effectiveUserId, request));
     }
 
@@ -49,7 +74,16 @@ public class OrderController {
             @RequestHeader(value = "X-User-Id", required = false) String userId,
             @RequestHeader(value = "X-User-Roles", required = false) String roles) {
         OrderResponse order = orderService.getOrderById(id);
-    
+        boolean admin = isAdmin(roles);
+        String requesterUserId = isBlank(userId) ? null : userId.trim();
+        if (!admin) {
+            if (requesterUserId == null) {
+                return ResponseEntity.status(401).build();
+            }
+            if (!requesterUserId.equals(order.getUserId())) {
+                return ResponseEntity.status(403).build();
+            }
+        }
         return ResponseEntity.ok(order);
     }
 
@@ -59,7 +93,10 @@ public class OrderController {
     @ApiResponse(responseCode = "200", description = "List of orders returned")
     public ResponseEntity<List<OrderResponse>> getMyOrders(
             @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        String effectiveUserId = (userId == null || userId.isBlank()) ? "guest" : userId;
+        if (isBlank(userId)) {
+            return ResponseEntity.status(401).build();
+        }
+        String effectiveUserId = userId.trim();
         return ResponseEntity.ok(orderService.getOrdersByUserId(effectiveUserId));
     }
 
@@ -71,10 +108,9 @@ public class OrderController {
     public ResponseEntity<OrderResponse> updateOrderStatus(
             @PathVariable String id,
             @RequestHeader(value = "X-User-Roles", required = false) String roles,
+            @RequestHeader(value = "X-Service-Role", required = false) String serviceRole,
             @RequestParam String status) {
-        // If request came through the gateway with roles, enforce ADMIN.
-        // If roles header is missing (e.g., internal call from payment-service), allow it.
-        if (roles != null && !roles.isBlank() && !isAdmin(roles)) {
+        if (!isAdmin(roles) && !isServicePayment(serviceRole)) {
             return ResponseEntity.status(403).build();
         }
         return ResponseEntity.ok(orderService.updateOrderStatus(id, status));

@@ -37,8 +37,8 @@ public class OrderServiceImpl implements OrderService {
         if (value instanceof BigDecimal bd) return bd;
         if (value instanceof Number n) return BigDecimal.valueOf(n.doubleValue());
         try {
-            return new BigDecimal(String.valueOf(value));
-        } catch (Exception e) {
+            return new BigDecimal(value.toString());
+        } catch (NumberFormatException e) {
             return null;
         }
     }
@@ -46,11 +46,14 @@ public class OrderServiceImpl implements OrderService {
     private static Integer asInt(Object value) {
         if (value == null) return null;
         if (value instanceof Number n) return n.intValue();
-        try {
-            return Integer.parseInt(String.valueOf(value));
-        } catch (Exception e) {
-            return null;
+        if (value instanceof String text) {
+            try {
+                return Integer.valueOf(text.trim());
+            } catch (NumberFormatException e) {
+                return null;
+            }
         }
+        return null;
     }
 
     private static boolean isAvailable(Map<String, Object> item) {
@@ -95,6 +98,9 @@ public class OrderServiceImpl implements OrderService {
         logger.info("Creating order for user: {}", userId);
         if (orderRepository == null) {
             throw new IllegalStateException("OrderRepository is not available");
+        }
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("userId is required");
         }
         if (request == null || request.getItems() == null || request.getItems().isEmpty()) {
             throw new IllegalArgumentException("Order must contain at least one item");
@@ -178,6 +184,9 @@ public class OrderServiceImpl implements OrderService {
         logger.info("Fetching orders for user: {}", userId);
         if (orderRepository == null) {
             throw new IllegalStateException("OrderRepository is not available");
+        }
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("userId is required");
         }
         return orderRepository.findByUserId(userId)
                 .stream()

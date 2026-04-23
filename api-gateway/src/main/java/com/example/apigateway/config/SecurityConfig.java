@@ -50,8 +50,7 @@ public class SecurityConfig {
 
     private static final String[] PUBLIC_CATALOG_GET_PATHS = {
             "/catalog/items/**",
-            "/catalog/categories/**",
-            "/catalog/dashboard/**"
+            "/catalog/categories/**"
     };
 
     @Bean

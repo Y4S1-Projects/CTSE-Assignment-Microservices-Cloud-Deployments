@@ -6,6 +6,9 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.config.annotation.web.configurers.FormLoginConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HttpBasicConfigurer;
+import org.springframework.security.config.annotation.web.configurers.LogoutConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
@@ -18,11 +21,22 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, GatewayAuthenticationFilter gatewayAuthenticationFilter) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
+            .httpBasic(HttpBasicConfigurer::disable)
+            .formLogin(FormLoginConfigurer::disable)
+            .logout(LogoutConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+            .addFilterBefore(gatewayAuthenticationFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
+            .authorizeHttpRequests(auth -> auth
+                    .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                    .requestMatchers("/actuator/**", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/webjars/**").permitAll()
+                    .requestMatchers(org.springframework.http.HttpMethod.POST, "/stripe/webhook").permitAll()
+                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/orders").hasRole("ADMIN")
+                    .requestMatchers(org.springframework.http.HttpMethod.POST, "/checkout", "/stripe/create-intent").authenticated()
+                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/stripe/status/**", "/order/**", "/user/**", "/**").authenticated()
+                    .anyRequest().denyAll());
 
         return http.build();
     }
