@@ -9,7 +9,7 @@ import Card from "@/components/common/Card";
 import Button from "@/components/common/Button";
 import { checkout, createOrder, createStripeIntent } from "@/lib/foodService";
 import { notifyAlert } from "@/lib/alerts";
-import { clearCart, getAuthToken, getCart, getCurrentUser } from "@/lib/storage";
+import { clearCart, getAuthToken, getCart, getCurrentUser, pushOrderHistory } from "@/lib/storage";
 
 // Dynamic import to avoid hydration issues with Stripe
 const StripeCheckout = dynamic(() => import("@/components/StripeCheckout"), {
@@ -23,6 +23,28 @@ const stripePromise = loadStripe(
 function formatPrice(value) {
 	const numeric = Number(value || 0);
 	return `$${numeric.toFixed(2)}`;
+}
+
+function buildLocalOrder(orderId, userId, items, totalAmount, status = "PAID") {
+	return {
+		id: orderId,
+		userId,
+		status,
+		totalAmount,
+		items: items.map((item, index) => {
+			const unitPrice = Number(item.price || 0);
+			const quantity = Number(item.quantity || 0);
+			return {
+				id: `${orderId}-${index + 1}`,
+				itemId: item.itemId || item.catalogItemId || item.id,
+				catalogItemId: item.catalogItemId || item.itemId || item.id,
+				itemName: item.name || item.itemName || item.itemId || item.catalogItemId || item.id,
+				unitPrice,
+				quantity,
+				lineTotal: unitPrice * quantity,
+			};
+		}),
+	};
 }
 
 export default function CheckoutPage() {
@@ -87,6 +109,8 @@ export default function CheckoutPage() {
 					paymentMethod,
 				});
 			}
+
+			pushOrderHistory({ ...created, status: "PAID" });
 
 			// 3) Clear cart and go to success page
 			clearCart();
@@ -175,6 +199,8 @@ export default function CheckoutPage() {
 					paymentMethod: "STRIPE",
 				});
 			}
+
+			pushOrderHistory(buildLocalOrder(stripeOrderId, getCurrentUser()?.id || "guest", cart, subtotal, "PAID"));
 
 			clearCart();
 			setStripeMode(false);

@@ -241,7 +241,12 @@ export async function getPaymentById(id) {
 // ---------------------------------------------------------------------------
 
 export async function createOrder(items) {
-	const payload = { items: items.map((item) => ({ itemId: item.id, quantity: item.quantity })) };
+	const payload = {
+		items: items.map((item) => ({
+			itemId: item.itemId || item.catalogItemId || item.id,
+			quantity: item.quantity,
+		})),
+	};
 	// Trailing slash avoids Spring redirecting to backend :8083 (breaks CORS when using gateway :8080)
 	return apiRequest("/orders/", { method: "POST", body: JSON.stringify(payload) });
 }

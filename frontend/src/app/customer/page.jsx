@@ -10,11 +10,42 @@ import CartSummary from "@/components/food/CartSummary";
 import OrdersTable from "@/components/food/OrdersTable";
 import { getMyProfile, logoutUser, validateToken } from "@/lib/authService";
 import { checkout, createOrder, getMenuItems, getMyOrders } from "@/lib/foodService";
-import { clearCart, getAuthToken, getCart, getCurrentUser, isAdminUser, saveCart } from "@/lib/storage";
+import {
+	clearCart,
+	getAuthToken,
+	getCart,
+	getCurrentUser,
+	getOrderHistory,
+	isAdminUser,
+	saveCart,
+} from "@/lib/storage";
 
 function formatPrice(value) {
 	const numeric = Number(value || 0);
 	return `$${numeric.toFixed(2)}`;
+}
+
+function mergeOrders(primaryOrders, secondaryOrders) {
+	const merged = [];
+	const seenKeys = new Set();
+
+	for (const order of [...(primaryOrders || []), ...(secondaryOrders || [])]) {
+		if (!order) continue;
+		const key =
+			order.id ||
+			`${order.userId || ""}-${order.totalAmount || ""}-${Array.isArray(order.items) ? order.items.length : order.items || ""}`;
+		if (seenKeys.has(key)) continue;
+		seenKeys.add(key);
+		merged.push(order);
+	}
+
+	return merged;
+}
+
+function getLocalOrdersForUser(userId) {
+	const localOrders = getOrderHistory();
+	if (!userId) return localOrders;
+	return localOrders.filter((order) => !order?.userId || order.userId === userId);
 }
 
 export default function CustomerPage() {
@@ -48,6 +79,8 @@ export default function CustomerPage() {
 
 		async function loadInitial() {
 			try {
+				const currentUser = getCurrentUser();
+				const currentUserId = currentUser?.id || currentUser?.userId;
 				// If token is stale/invalid, clear it and force re-login.
 				const token = getAuthToken();
 				if (token) {
@@ -59,11 +92,9 @@ export default function CustomerPage() {
 					getMyOrders().catch(() => []),
 				]);
 				// Fall back to locally stored user if profile API is unavailable
-				setProfile(profileData || getCurrentUser());
+				setProfile(profileData || currentUser);
 				setMenuItems(menuData);
-				if (orderData.length > 0) {
-					setOrders(orderData);
-				}
+				setOrders(mergeOrders(orderData, getLocalOrdersForUser(currentUserId)));
 			} catch (loadError) {
 				const msg = loadError.message || "Failed to load customer data";
 				setError(msg);
@@ -123,11 +154,11 @@ export default function CustomerPage() {
 	}
 
 	async function handleCheckout() {
-	if (cart.length === 0) return;
-	// Clear cached menu so stock counts refresh when returning from checkout
-  	sessionStorage.removeItem("menuItems");
-	// Navigate to dedicated checkout page instead of processing silently
-	router.push("/customer/checkout");
+		if (cart.length === 0) return;
+		// Clear cached menu so stock counts refresh when returning from checkout
+		sessionStorage.removeItem("menuItems");
+		// Navigate to dedicated checkout page instead of processing silently
+		router.push("/customer/checkout");
 	}
 
 	async function handleLogout() {
