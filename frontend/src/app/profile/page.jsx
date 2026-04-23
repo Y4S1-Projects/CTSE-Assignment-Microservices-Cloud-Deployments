@@ -373,7 +373,7 @@ export default function ProfilePage() {
 									onChange={(event) => setAddressForm((prev) => ({ ...prev, formattedAddress: event.target.value }))}
 								/>
 								<Input
-									label='Google Place ID'
+									label='Google place details'
 									value={addressForm.googlePlaceId}
 									onChange={(event) => setAddressForm((prev) => ({ ...prev, googlePlaceId: event.target.value }))}
 								/>

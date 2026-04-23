@@ -266,7 +266,7 @@ export async function updateOrderStatus(id, status) {
 		notifyAlert({
 			variant: "success",
 			title: "Order status updated",
-			message: `Order ${id} changed to ${status}.`,
+			message: `The selected order changed to ${status}.`,
 		});
 		return response;
 	} catch (error) {

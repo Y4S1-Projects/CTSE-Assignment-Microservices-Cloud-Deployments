@@ -20,6 +20,8 @@ const stripePromise = loadStripe(
 	"pk_test_51TDiNzRL1F3MeUCkfwlcHcpbzslBdXs3UwCyvUyHEGCDJXZk81CfTxFRWKZTpbPT6YipeDen5QadaOupTdaCpkj1002q1GoINw",
 );
 
+const PAYMENT_SUCCESS_STORAGE_KEY = "frontend_payment_success";
+
 function formatPrice(value) {
 	const numeric = Number(value || 0);
 	return `$${numeric.toFixed(2)}`;
@@ -114,12 +116,18 @@ export default function CheckoutPage() {
 
 			// 3) Clear cart and go to success page
 			clearCart();
+			if (typeof window !== "undefined") {
+				sessionStorage.setItem(
+					PAYMENT_SUCCESS_STORAGE_KEY,
+					JSON.stringify({ orderId: created.id, total: subtotal.toFixed(2) }),
+				);
+			}
 			notifyAlert({
 				variant: "success",
 				title: "Order placed",
-				message: `Your order ${created.id} was processed successfully.`,
+				message: "Your order was processed successfully.",
 			});
-			router.push(`/customer/payment-success?orderId=${created.id}&total=${subtotal.toFixed(2)}`);
+			router.push("/customer/payment-success");
 		} catch (err) {
 			notifyAlert({
 				variant: "error",
@@ -178,7 +186,7 @@ export default function CheckoutPage() {
 		// Payment confirmed by Stripe -- now mark items as COMPLETED in our backend
 		try {
 			if (!stripeOrderId) {
-				setError("Missing Stripe order ID. Please retry payment.");
+				setError("Missing payment details. Please retry payment.");
 				return;
 			}
 
@@ -203,6 +211,12 @@ export default function CheckoutPage() {
 			pushOrderHistory(buildLocalOrder(stripeOrderId, getCurrentUser()?.id || "guest", cart, subtotal, "PAID"));
 
 			clearCart();
+			if (typeof window !== "undefined") {
+				sessionStorage.setItem(
+					PAYMENT_SUCCESS_STORAGE_KEY,
+					JSON.stringify({ orderId: stripeOrderId, total: subtotal.toFixed(2) }),
+				);
+			}
 			setStripeMode(false);
 			setStripeClientSecret(null);
 			setStripePaymentIntentId(null);
@@ -210,9 +224,9 @@ export default function CheckoutPage() {
 			notifyAlert({
 				variant: "success",
 				title: "Payment confirmed",
-				message: `Order ${stripeOrderId} has been placed successfully.`,
+				message: "Your order has been placed successfully.",
 			});
-			router.push(`/customer/payment-success?orderId=${stripeOrderId}&total=${subtotal.toFixed(2)}`);
+			router.push("/customer/payment-success");
 		} catch (err) {
 			notifyAlert({
 				variant: "error",
