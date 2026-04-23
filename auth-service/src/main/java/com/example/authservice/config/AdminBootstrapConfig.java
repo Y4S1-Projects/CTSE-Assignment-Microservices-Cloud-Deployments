@@ -27,6 +27,9 @@ public class AdminBootstrapConfig {
     ) {
         return args -> {
             if (enabled && userRepository.findByEmail(email).isEmpty()) {
+                if (password == null || password.isBlank()) {
+                    throw new IllegalStateException("ADMIN_PASSWORD must be set when admin bootstrap is enabled");
+                }
                 userRepository.save(User.builder()
                         .email(email)
                         .fullName(fullName)
@@ -37,6 +40,9 @@ public class AdminBootstrapConfig {
             }
 
             if (customerEnabled && userRepository.findByEmail(customerEmail).isEmpty()) {
+                if (customerPassword == null || customerPassword.isBlank()) {
+                    throw new IllegalStateException("CUSTOMER_PASSWORD must be set when customer bootstrap is enabled");
+                }
                 userRepository.save(User.builder()
                         .email(customerEmail)
                         .fullName(customerFullName)

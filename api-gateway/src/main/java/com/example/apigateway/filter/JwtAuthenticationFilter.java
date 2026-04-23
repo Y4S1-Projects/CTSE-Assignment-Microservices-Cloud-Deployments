@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -31,9 +32,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private static final String[] PUBLIC_ENDPOINTS = {
             "/auth/register",
             "/auth/login",
-            "/auth/validate",
             "/auth/refresh",
-            "/auth/logout",
             "/auth/forgot-password",
             "/auth/reset-password",
             "/auth/health",
@@ -65,6 +64,12 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         String method = request.getMethod().name();
 
         logger.debug("Processing request: {} {}", method, path);
+
+        // Always allow CORS preflight requests to pass through unauthenticated.
+        if ("OPTIONS".equalsIgnoreCase(method)) {
+            logger.debug("CORS preflight request bypassed: {}", path);
+            return chain.filter(exchange);
+        }
 
         // Check if the request path is a public endpoint (method-agnostic)
         if (isPublicEndpoint(path)) {
@@ -152,9 +157,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             exchange.getRequest().getPath().value()
         );
         
-        return response.writeWith(
-            Mono.just(response.bufferFactory().wrap(errorJson.getBytes()))
-        );
+        return response.writeWith(Mono.fromSupplier(
+                () -> response.bufferFactory().wrap(errorJson.getBytes(StandardCharsets.UTF_8))
+        ));
     }
 
     @Override

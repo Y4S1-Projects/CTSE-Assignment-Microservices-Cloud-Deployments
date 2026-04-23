@@ -112,7 +112,7 @@ export default function Header() {
 
 					{/* Center Navigation - Role-based */}
 					{authState.ready && authState.authenticated && (
-						<nav className='flex-1 flex items-center justify-center gap-1 sm:gap-3'>
+						<nav className='flex items-center justify-center flex-1 gap-1 sm:gap-3'>
 							{activeNavItems.map((item) => {
 								const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
 								return (
@@ -135,7 +135,7 @@ export default function Header() {
 							authState.authenticated ?
 								<>
 									{/* Signed in as (hidden on mobile) */}
-									<div className='hidden sm:flex items-center gap-2'>
+									<div className='items-center hidden gap-2 sm:flex'>
 										<span className='text-xs text-slate-500'>Signed in as:</span>
 										<span className='text-sm font-medium text-slate-700'>
 											{authState.user?.email || (authState.admin ? "Admin" : "Customer")}
@@ -161,7 +161,7 @@ export default function Header() {
 										</Button>
 									</Link>
 									<Link href='/auth/register'>
-										<Button variant='primary' className='whitespace-nowrap hidden sm:inline-flex'>
+										<Button variant='primary' className='hidden whitespace-nowrap sm:inline-flex'>
 											Sign Up
 										</Button>
 									</Link>
@@ -173,7 +173,7 @@ export default function Header() {
 
 				{/* Mobile view - show role badge below on small screens */}
 				{authState.ready && authState.authenticated && (
-					<div className='sm:hidden mt-3 flex items-center justify-between text-xs'>
+					<div className='flex items-center justify-between mt-3 text-xs sm:hidden'>
 						<span className='text-slate-600'>{authState.user?.email || (authState.admin ? "Admin" : "Customer")}</span>
 						<span
 							className={`px-2 py-1 rounded font-semibold ${

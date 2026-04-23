@@ -1,6 +1,10 @@
 package com.example.authservice.util;
 
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.Keys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +21,7 @@ import java.util.Map;
 public class JwtTokenProvider {
     private static final Logger logger = LoggerFactory.getLogger(JwtTokenProvider.class);
 
-    @Value("${app.jwt.secret:your-super-secret-key-change-in-production-env}")
+    @Value("${app.jwt.secret}")
     private String jwtSecret;
 
     @Value("${app.jwt.access-expiration:900000}")
@@ -26,13 +30,6 @@ public class JwtTokenProvider {
     @Value("${app.jwt.issuer:food-ordering-system}")
     private String jwtIssuer;
 
-    /**
-     * Generate JWT token with user details
-     * @param userId User ID
-     * @param email User email
-     * @param role User role
-     * @return JWT token string
-     */
     public String generateToken(String userId, String email, String role) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpiration);
@@ -52,11 +49,6 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    /**
-     * Validate JWT token
-     * @param token JWT token string
-     * @return true if valid, false otherwise
-     */
     public boolean validateToken(String token) {
         try {
             Jwts.parser()
@@ -78,41 +70,21 @@ public class JwtTokenProvider {
         return false;
     }
 
-    /**
-     * Extract user ID from token
-     * @param token JWT token string
-     * @return User ID
-     */
     public String extractUserId(String token) {
         Claims claims = extractAllClaims(token);
         return claims.get("userId", String.class);
     }
 
-    /**
-     * Extract user email from token
-     * @param token JWT token string
-     * @return User email
-     */
     public String extractEmail(String token) {
         Claims claims = extractAllClaims(token);
         return claims.getSubject();
     }
 
-    /**
-     * Extract roles from token
-     * @param token JWT token string
-     * @return List of roles
-     */
     public String extractRole(String token) {
         Claims claims = extractAllClaims(token);
         return claims.get("role", String.class);
     }
 
-    /**
-     * Extract all claims from token
-     * @param token JWT token string
-     * @return Claims object
-     */
     private Claims extractAllClaims(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
@@ -121,20 +93,11 @@ public class JwtTokenProvider {
                 .getPayload();
     }
 
-    /**
-     * Get signing key from secret
-     * @return SecretKey for JWT signing
-     */
     private SecretKey getSigningKey() {
         byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    /**
-     * Check if token is expired
-     * @param token JWT token string
-     * @return true if expired, false otherwise
-     */
     public boolean isTokenExpired(String token) {
         try {
             Claims claims = extractAllClaims(token);
