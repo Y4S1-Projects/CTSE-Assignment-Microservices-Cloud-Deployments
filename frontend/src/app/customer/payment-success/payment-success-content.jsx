@@ -6,6 +6,8 @@ import Card from "@/components/common/Card";
 import Button from "@/components/common/Button";
 import { getPaymentByOrderId } from "@/lib/foodService";
 
+const PAYMENT_SUCCESS_STORAGE_KEY = "frontend_payment_success";
+
 function formatPrice(value) {
 	const numeric = Number(value || 0);
 	return `$${numeric.toFixed(2)}`;
@@ -14,22 +16,40 @@ function formatPrice(value) {
 export default function PaymentSuccessContent() {
 	const router = useRouter();
 	const params = useSearchParams();
-	const orderId = params.get("orderId");
-	const total = params.get("total");
+	const [paymentContext, setPaymentContext] = useState({
+		orderId: params.get("orderId") || "",
+		total: params.get("total") || "",
+	});
 	const [payment, setPayment] = useState(null);
 
 	useEffect(() => {
-		if (orderId) {
-			getPaymentByOrderId(orderId)
+		if (typeof window !== "undefined") {
+			const stored = sessionStorage.getItem(PAYMENT_SUCCESS_STORAGE_KEY);
+			if (stored) {
+				try {
+					const parsed = JSON.parse(stored);
+					if (parsed?.orderId || parsed?.total) {
+						setPaymentContext({
+							orderId: parsed?.orderId || "",
+							total: parsed?.total || "",
+						});
+					}
+				} catch {
+					// Ignore malformed cached data and fall back to query params.
+				}
+				sessionStorage.removeItem(PAYMENT_SUCCESS_STORAGE_KEY);
+			}
+			sessionStorage.removeItem("menuItems");
+		}
+
+		if (paymentContext.orderId) {
+			getPaymentByOrderId(paymentContext.orderId)
 				.then(setPayment)
 				.catch(() => null);
 		}
+	}, [paymentContext.orderId, params]);
 
-		// Clear any cached menu so the customer page refetches fresh stock.
-		if (typeof window !== "undefined") {
-			sessionStorage.removeItem("menuItems");
-		}
-	}, [orderId]);
+	const total = paymentContext.total;
 
 	return (
 		<div className='max-w-lg py-12 mx-auto space-y-6 text-center'>
@@ -48,18 +68,6 @@ export default function PaymentSuccessContent() {
 
 			<Card className='space-y-3 text-left'>
 				<h2 className='font-semibold text-slate-800'>Payment Details</h2>
-				{orderId && (
-					<div className='flex justify-between text-sm'>
-						<span className='text-slate-500'>Order ID</span>
-						<span className='font-mono text-xs text-slate-800'>{orderId}</span>
-					</div>
-				)}
-				{payment?.reference && (
-					<div className='flex justify-between text-sm'>
-						<span className='text-slate-500'>Reference</span>
-						<span className='font-semibold text-slate-800'>{payment.reference}</span>
-					</div>
-				)}
 				{total && (
 					<div className='flex justify-between text-sm'>
 						<span className='text-slate-500'>Amount Paid</span>

@@ -58,7 +58,7 @@ public class PaymentServiceImpl implements PaymentService {
                     resp.setItemName((String) item.get("name"));
                     resp.setItemCategory((String) item.get("category"));
                     Object stock = item.get("stockCount");
-                    if (stock instanceof Number) resp.setRemainingStock(((Number) stock).intValue());
+                    if (stock instanceof Number number) resp.setRemainingStock(number.intValue());
                 }
             } catch (Exception e) {
                 logger.warn("Could not enrich payment {} with catalog info: {}", resp.getId(), e.getMessage());
@@ -72,16 +72,27 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public PaymentResponse checkout(PaymentRequest request) {
+        if (request.getUserId() == null || request.getUserId().isBlank()) {
+            throw new IllegalArgumentException("userId is required");
+        }
+
         logger.info("Processing checkout for item {} by user {}", request.getItemId(), request.getUserId());
 
         // Simulate payment processing (always succeeds in this demo)
         String reference = "PAY-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
+        String effectiveUserId = request.getUserId().trim();
+        Integer requestedQuantity = request.getQuantity();
+        int quantity = 1;
+        if (requestedQuantity != null) {
+            quantity = requestedQuantity;
+        }
+
         Payment payment = Payment.builder()
                 .itemId(request.getItemId())
                 .orderId(request.getOrderId())
-                .userId(request.getUserId() != null ? request.getUserId() : "guest")
-                .quantity(request.getQuantity() != null ? request.getQuantity() : 1)
+                .userId(effectiveUserId)
+            .quantity(quantity)
                 .amount(request.getAmount() != null ? request.getAmount() : BigDecimal.ZERO)
                 .paymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "CARD")
                 .status("COMPLETED")

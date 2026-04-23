@@ -46,10 +46,11 @@ export default function AdminPaymentsPage() {
   const filtered = payments.filter(
     (p) =>
       !search ||
-      p.id?.includes(search) ||
-      p.orderId?.includes(search) ||
-      p.userId?.includes(search) ||
-      p.reference?.includes(search),
+      p.itemName?.toLowerCase().includes(search.toLowerCase()) ||
+      p.paymentMethod?.toLowerCase().includes(search.toLowerCase()) ||
+      p.status?.toLowerCase().includes(search.toLowerCase()) ||
+      p.reference?.toLowerCase().includes(search.toLowerCase()) ||
+      String(p.amount || "").includes(search),
   );
 
   const totalRevenue = payments
@@ -92,10 +93,10 @@ export default function AdminPaymentsPage() {
       <Card>
         <input
           type="text"
-          placeholder="Search by payment ID, order ID, user ID, or reference..."
+          placeholder="Search by item, method, status, or amount..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-xl border border-brand-200 px-4 py-2 text-sm focus:border-brand-500 focus:outline-none"
+          className="w-full px-4 py-2 text-sm border rounded-xl border-brand-200 focus:border-brand-500 focus:outline-none"
         />
       </Card>
 
@@ -107,12 +108,9 @@ export default function AdminPaymentsPage() {
         {error && <p className="text-sm text-red-600">{error}</p>}
         {!loading && !error && (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
+            <table className="min-w-full text-sm text-left">
               <thead>
-                <tr className="border-b border-brand-100 text-xs font-semibold text-slate-500">
-                  <th className="py-2 pr-4">Reference</th>
-                  <th className="py-2 pr-4">Order ID</th>
-                  <th className="py-2 pr-4">User</th>
+                <tr className="text-xs font-semibold border-b border-brand-100 text-slate-500">
                   <th className="py-2 pr-4">Item</th>
                   <th className="py-2 pr-4">Amount</th>
                   <th className="py-2 pr-4">Method</th>
@@ -123,7 +121,7 @@ export default function AdminPaymentsPage() {
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-6 text-center text-slate-400">
+                    <td colSpan={5} className="py-6 text-center text-slate-400">
                       No payments found.
                     </td>
                   </tr>
@@ -133,15 +131,8 @@ export default function AdminPaymentsPage() {
                       key={p.id}
                       className="border-b border-brand-50 text-slate-700 hover:bg-brand-50"
                     >
-                      <td className="py-2 pr-4 font-mono text-xs font-semibold text-brand-700">
-                        {p.reference || "—"}
-                      </td>
-                      <td className="py-2 pr-4 font-mono text-xs">
-                        {p.orderId || "—"}
-                      </td>
-                      <td className="py-2 pr-4 text-xs">{p.userId || "—"}</td>
                       <td className="py-2 pr-4 text-xs">
-                        {p.itemName || p.itemId || "—"}
+                        {p.itemName || "Item"}
                       </td>
                       <td className="py-2 pr-4 font-semibold text-slate-900">
                         {formatPrice(p.amount)}

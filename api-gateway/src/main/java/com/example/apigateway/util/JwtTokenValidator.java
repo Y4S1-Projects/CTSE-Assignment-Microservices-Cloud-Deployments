@@ -16,7 +16,7 @@ import java.util.List;
 public class JwtTokenValidator {
     private static final Logger logger = LoggerFactory.getLogger(JwtTokenValidator.class);
 
-    @Value("${app.jwt.secret:your-super-secret-key-change-in-production-env}")
+    @Value("${app.jwt.secret}")
     private String jwtSecret;
 
     /**

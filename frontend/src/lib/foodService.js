@@ -1,4 +1,5 @@
 import { apiRequest } from "@/lib/apiClient";
+import { notifyAlert } from "@/lib/alerts";
 
 // ---------------------------------------------------------------------------
 // Fallback catalog data (used when catalog service is unavailable)
@@ -50,6 +51,8 @@ const fallbackMenu = [
 	},
 ];
 
+let catalogFallbackAlertShown = false;
+
 // ---------------------------------------------------------------------------
 // Catalog Service
 // ---------------------------------------------------------------------------
@@ -59,6 +62,14 @@ export async function getMenuItems() {
 		const data = await apiRequest("/catalog/items", { method: "GET" });
 		if (Array.isArray(data) && data.length > 0) return data;
 	} catch {
+		if (!catalogFallbackAlertShown) {
+			notifyAlert({
+				variant: "warning",
+				title: "Catalog temporarily unavailable",
+				message: "Showing cached menu items while the live catalog recovers.",
+			});
+			catalogFallbackAlertShown = true;
+		}
 		// fall through to fallback
 	}
 	return fallbackMenu;
@@ -89,36 +100,105 @@ export async function getCatalogCategories() {
 
 /** Admin — create new catalog item */
 export async function createCatalogItem(data) {
-	return apiRequest("/catalog/items", {
-		method: "POST",
-		body: JSON.stringify(data),
-	});
+	try {
+		const response = await apiRequest("/catalog/items", {
+			method: "POST",
+			body: JSON.stringify(data),
+		});
+		notifyAlert({
+			variant: "success",
+			title: "Catalog item added",
+			message: `${data?.name || "The item"} was added to the catalog.`,
+		});
+		return response;
+	} catch (error) {
+		notifyAlert({
+			variant: "error",
+			title: "Catalog item add failed",
+			message: error?.message || "We could not add the item.",
+		});
+		throw error;
+	}
 }
 
 /** Admin — update existing item (full or partial) */
 export async function updateCatalogItem(id, data) {
-	return apiRequest(`/catalog/items/${id}`, {
-		method: "PUT",
-		body: JSON.stringify(data),
-	});
+	try {
+		const response = await apiRequest(`/catalog/items/${id}`, {
+			method: "PUT",
+			body: JSON.stringify(data),
+		});
+		notifyAlert({
+			variant: "success",
+			title: "Catalog item updated",
+			message: `${data?.name || "The item"} was saved successfully.`,
+		});
+		return response;
+	} catch (error) {
+		notifyAlert({
+			variant: "error",
+			title: "Catalog item update failed",
+			message: error?.message || "We could not update the item.",
+		});
+		throw error;
+	}
 }
 
 /** Admin — set or adjust stock count.  Pass { stockCount } or { delta } */
 export async function updateCatalogStock(id, stockData) {
-	return apiRequest(`/catalog/items/${id}/stock`, {
-		method: "PATCH",
-		body: JSON.stringify(stockData),
-	});
+	try {
+		const response = await apiRequest(`/catalog/items/${id}/stock`, {
+			method: "PATCH",
+			body: JSON.stringify(stockData),
+		});
+		notifyAlert({
+			variant: "success",
+			title: "Stock updated",
+			message: "Inventory count was saved successfully.",
+		});
+		return response;
+	} catch (error) {
+		notifyAlert({
+			variant: "error",
+			title: "Stock update failed",
+			message: error?.message || "We could not update the stock level.",
+		});
+		throw error;
+	}
 }
 
 /** Admin — delete item */
 export async function deleteCatalogItem(id) {
-	return apiRequest(`/catalog/items/${id}`, { method: "DELETE" });
+	try {
+		const response = await apiRequest(`/catalog/items/${id}`, { method: "DELETE" });
+		notifyAlert({
+			variant: "success",
+			title: "Catalog item deleted",
+			message: "The item was removed from the catalog.",
+		});
+		return response;
+	} catch (error) {
+		notifyAlert({
+			variant: "error",
+			title: "Catalog item delete failed",
+			message: error?.message || "We could not delete the item.",
+		});
+		throw error;
+	}
 }
 
 /** Admin — dashboard stats */
 export async function getCatalogDashboard() {
-	return apiRequest("/catalog/dashboard", { method: "GET" });
+	try {
+		return await apiRequest("/catalog/dashboard", { method: "GET" });
+	} catch (error) {
+		notifyAlert({
+			variant: "error",
+			title: "Catalog dashboard unavailable",
+			message: error?.message || "We could not load catalog metrics.",
+		});
+		throw error;
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -142,7 +222,12 @@ export async function getAllOrders() {
 	try {
 		const data = await apiRequest("/payments/orders", { method: "GET" });
 		return Array.isArray(data) ? data : [];
-	} catch {
+	} catch (error) {
+		notifyAlert({
+			variant: "error",
+			title: "Orders unavailable",
+			message: error?.message || "We could not load the order list.",
+		});
 		return [];
 	}
 }
@@ -156,7 +241,12 @@ export async function getPaymentById(id) {
 // ---------------------------------------------------------------------------
 
 export async function createOrder(items) {
-	const payload = { items: items.map((item) => ({ itemId: item.id, quantity: item.quantity })) };
+	const payload = {
+		items: items.map((item) => ({
+			itemId: item.itemId || item.catalogItemId || item.id,
+			quantity: item.quantity,
+		})),
+	};
 	// Trailing slash avoids Spring redirecting to backend :8083 (breaks CORS when using gateway :8080)
 	return apiRequest("/orders/", { method: "POST", body: JSON.stringify(payload) });
 }
@@ -171,7 +261,22 @@ export async function getMyOrders() {
 }
 
 export async function updateOrderStatus(id, status) {
-	return apiRequest(`/orders/${id}/status?status=${encodeURIComponent(status)}`, { method: "PATCH" });
+	try {
+		const response = await apiRequest(`/orders/${id}/status?status=${encodeURIComponent(status)}`, { method: "PATCH" });
+		notifyAlert({
+			variant: "success",
+			title: "Order status updated",
+			message: `The selected order changed to ${status}.`,
+		});
+		return response;
+	} catch (error) {
+		notifyAlert({
+			variant: "error",
+			title: "Order update failed",
+			message: error?.message || "We could not update the order status.",
+		});
+		throw error;
+	}
 }
 
 export async function getOrderById(id) {
@@ -186,7 +291,9 @@ export async function processPayment(orderId, amount) {
 }
 
 export async function updateMenuAvailability(id, availability) {
-	return apiRequest(`/catalog/items/${id}/availability?availability=${encodeURIComponent(availability)}`, { method: "PATCH" });
+	return apiRequest(`/catalog/items/${id}/availability?availability=${encodeURIComponent(availability)}`, {
+		method: "PATCH",
+	});
 }
 
 export async function getPaymentByOrderId(orderId) {
@@ -199,4 +306,3 @@ export async function createStripeIntent(data) {
 		body: JSON.stringify(data),
 	});
 }
-
