@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { validateToken, logoutUser } from "@/lib/authService";
+import { notifyAlert } from "@/lib/alerts";
 import Button from "@/components/common/Button";
 import {
 	clearAuthSession,
@@ -96,9 +97,23 @@ export default function Header() {
 		:	[];
 
 	async function handleLogout() {
-		await logoutUser();
-		setAuthState({ ready: true, authenticated: false, admin: false, user: null });
-		router.push("/auth/login");
+		try {
+			await logoutUser();
+			notifyAlert({
+				variant: "success",
+				title: "Signed out",
+				message: "Your session has been closed.",
+			});
+		} catch (error) {
+			notifyAlert({
+				variant: "warning",
+				title: "Signed out locally",
+				message: error?.message || "The session was cleared, but the server logout request could not be confirmed.",
+			});
+		} finally {
+			setAuthState({ ready: true, authenticated: false, admin: false, user: null });
+			router.push("/auth/login");
+		}
 	}
 
 	return (

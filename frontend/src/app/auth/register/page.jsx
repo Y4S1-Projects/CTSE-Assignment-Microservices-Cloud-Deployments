@@ -6,6 +6,7 @@ import Button from "@/components/common/Button";
 import Card from "@/components/common/Card";
 import Input from "@/components/common/Input";
 import { registerUser } from "@/lib/authService";
+import { notifyAlert } from "@/lib/alerts";
 
 export default function RegisterPage() {
 	const router = useRouter();
@@ -14,22 +15,26 @@ export default function RegisterPage() {
 		email: "",
 		password: "",
 	});
-	const [error, setError] = useState("");
-	const [success, setSuccess] = useState("");
 	const [loading, setLoading] = useState(false);
 
 	async function handleSubmit(event) {
 		event.preventDefault();
-		setError("");
-		setSuccess("");
 		setLoading(true);
 
 		try {
 			await registerUser(form);
-			setSuccess("Registration successful. You can now sign in.");
-			setTimeout(() => router.push("/auth/login"), 800);
+			notifyAlert({
+				variant: "success",
+				title: "Registration successful",
+				message: "You can now sign in with your new account.",
+			});
+			router.replace("/auth/login");
 		} catch (submitError) {
-			setError(submitError.message);
+			notifyAlert({
+				variant: "error",
+				title: "Registration failed",
+				message: submitError?.message || "Unable to create the account.",
+			});
 		} finally {
 			setLoading(false);
 		}
@@ -63,12 +68,6 @@ export default function RegisterPage() {
 					/>
 					<div className='hidden sm:block' />
 					<div className='sm:col-span-2 space-y-2'>
-						{error ?
-							<p className='text-sm text-red-600'>{error}</p>
-						:	null}
-						{success ?
-							<p className='text-sm text-green-700'>{success}</p>
-						:	null}
 						<Button type='submit' className='w-full' disabled={loading}>
 							{loading ? "Creating account..." : "Create Account"}
 						</Button>
