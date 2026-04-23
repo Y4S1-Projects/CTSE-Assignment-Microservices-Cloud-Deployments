@@ -6,24 +6,32 @@ import Button from "@/components/common/Button";
 import Card from "@/components/common/Card";
 import Input from "@/components/common/Input";
 import { loginUser } from "@/lib/authService";
+import { notifyAlert } from "@/lib/alerts";
 
 export default function LoginPage() {
 	const router = useRouter();
 	const [form, setForm] = useState({ email: "", password: "" });
-	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
 
 	async function handleSubmit(event) {
 		event.preventDefault();
-		setError("");
 		setLoading(true);
 
 		try {
 			const response = await loginUser(form);
 			const role = response?.role || response?.user?.role;
-			window.location.href = role === "ADMIN" ? "/admin" : "/customer";
+			notifyAlert({
+				variant: "success",
+				title: "Signed in",
+				message: `Redirecting to the ${role === "ADMIN" ? "admin" : "customer"} area.`,
+			});
+			router.replace(role === "ADMIN" ? "/admin" : "/customer");
 		} catch (submitError) {
-			setError(submitError.message);
+			notifyAlert({
+				variant: "error",
+				title: "Sign in failed",
+				message: submitError?.message || "Please check your credentials and try again.",
+			});
 		} finally {
 			setLoading(false);
 		}
@@ -49,9 +57,6 @@ export default function LoginPage() {
 						onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
 						required
 					/>
-					{error ?
-						<p className='text-sm text-red-600'>{error}</p>
-					:	null}
 					<Button type='submit' className='w-full' disabled={loading}>
 						{loading ? "Signing in..." : "Sign In"}
 					</Button>

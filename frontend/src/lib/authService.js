@@ -1,5 +1,6 @@
 import { apiRequest } from "@/lib/apiClient";
 import { clearAuthSession, getAuthToken, getRefreshToken, saveAuthSession } from "@/lib/storage";
+import { notifyAlert } from "@/lib/alerts";
 
 function ensureSession() {
 	const token = getAuthToken();
@@ -18,10 +19,15 @@ export async function registerUser(formData) {
 		fullName: formData.fullName,
 	};
 
-	return apiRequest("/auth/register", {
-		method: "POST",
-		body: JSON.stringify(payload),
-	});
+	try {
+		const data = await apiRequest("/auth/register", {
+			method: "POST",
+			body: JSON.stringify(payload),
+		});
+		return data;
+	} catch (error) {
+		throw error;
+	}
 }
 
 export async function loginUser(credentials) {
@@ -30,29 +36,33 @@ export async function loginUser(credentials) {
 		password: credentials.password,
 	};
 
-	const data = await apiRequest("/auth/login", {
-		method: "POST",
-		body: JSON.stringify(payload),
-	});
+	try {
+		const data = await apiRequest("/auth/login", {
+			method: "POST",
+			body: JSON.stringify(payload),
+		});
 
-	const token = data?.token || data?.accessToken;
-	if (!token) {
-		throw new Error("Login succeeded but no access token was returned");
+		const token = data?.token || data?.accessToken;
+		if (!token) {
+			throw new Error("Login succeeded but no access token was returned");
+		}
+		const user = {
+			userId: data?.userId,
+			id: data?.userId,
+			email: data?.email || credentials?.email,
+			role: data?.role || "CUSTOMER",
+		};
+
+		saveAuthSession({
+			token,
+			refreshToken: data?.refreshToken,
+			user,
+		});
+
+		return { ...data, user, token };
+	} catch (error) {
+		throw error;
 	}
-	const user = {
-		userId: data?.userId,
-		id: data?.userId,
-		email: data?.email || credentials?.email,
-		role: data?.role || "CUSTOMER",
-	};
-
-	saveAuthSession({
-		token,
-		refreshToken: data?.refreshToken,
-		user,
-	});
-
-	return { ...data, user, token };
 }
 
 export async function validateToken(token) {
@@ -86,38 +96,101 @@ export async function logoutUser() {
 
 export async function getMyProfile() {
 	ensureSession();
-	return apiRequest("/auth/users/me", {
-		method: "GET",
-	});
+	try {
+		return await apiRequest("/auth/users/me", {
+			method: "GET",
+		});
+	} catch (error) {
+		notifyAlert({
+			variant: "error",
+			title: "Profile unavailable",
+			message: error?.message || "We could not load your profile.",
+		});
+		throw error;
+	}
 }
 
 export async function updateMyProfile(payload) {
 	ensureSession();
-	return apiRequest("/auth/users/profile", {
-		method: "PUT",
-		body: JSON.stringify(payload),
-	});
+	try {
+		const data = await apiRequest("/auth/users/profile", {
+			method: "PUT",
+			body: JSON.stringify(payload),
+		});
+		notifyAlert({
+			variant: "success",
+			title: "Profile updated",
+			message: "Your profile changes were saved.",
+		});
+		return data;
+	} catch (error) {
+		notifyAlert({
+			variant: "error",
+			title: "Profile update failed",
+			message: error?.message || "We could not save your profile.",
+		});
+		throw error;
+	}
 }
 
 export async function getAllUsers() {
 	ensureSession();
-	return apiRequest("/auth/admin/users", {
-		method: "GET",
-	});
+	try {
+		return await apiRequest("/auth/admin/users", {
+			method: "GET",
+		});
+	} catch (error) {
+		notifyAlert({
+			variant: "error",
+			title: "Users unavailable",
+			message: error?.message || "We could not load the user list.",
+		});
+		throw error;
+	}
 }
 
 export async function updateUserStatus(id, active) {
 	ensureSession();
-	return apiRequest(`/auth/admin/users/${id}/status`, {
-		method: "PATCH",
-		body: JSON.stringify({ active }),
-	});
+	try {
+		const data = await apiRequest(`/auth/admin/users/${id}/status`, {
+			method: "PATCH",
+			body: JSON.stringify({ active }),
+		});
+		notifyAlert({
+			variant: "success",
+			title: "User status updated",
+			message: active ? "The account was activated." : "The account was deactivated.",
+		});
+		return data;
+	} catch (error) {
+		notifyAlert({
+			variant: "error",
+			title: "User status update failed",
+			message: error?.message || "We could not change the user status.",
+		});
+		throw error;
+	}
 }
 
 export async function updateUserDetails(id, payload) {
 	ensureSession();
-	return apiRequest(`/auth/admin/users/${id}`, {
-		method: "PUT",
-		body: JSON.stringify(payload),
-	});
+	try {
+		const data = await apiRequest(`/auth/admin/users/${id}`, {
+			method: "PUT",
+			body: JSON.stringify(payload),
+		});
+		notifyAlert({
+			variant: "success",
+			title: "User updated",
+			message: `${payload?.email || "The user"} was saved successfully.`,
+		});
+		return data;
+	} catch (error) {
+		notifyAlert({
+			variant: "error",
+			title: "User update failed",
+			message: error?.message || "We could not save the user details.",
+		});
+		throw error;
+	}
 }

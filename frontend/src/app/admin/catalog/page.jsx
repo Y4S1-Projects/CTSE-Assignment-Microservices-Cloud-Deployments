@@ -50,10 +50,7 @@ export default function AdminCatalogPage() {
 	async function loadData() {
 		setError("");
 		try {
-			const [menuData, dashData] = await Promise.all([
-				getMenuItems(),
-				getCatalogDashboard().catch(() => null),
-			]);
+			const [menuData, dashData] = await Promise.all([getMenuItems(), getCatalogDashboard().catch(() => null)]);
 			setItems(Array.isArray(menuData) ? menuData : []);
 			setDashboard(dashData);
 		} catch (e) {
@@ -110,7 +107,11 @@ export default function AdminCatalogPage() {
 		try {
 			await updateCatalogStock(item.id, { stockCount: newStock });
 			setSuccess(`Stock for "${item.name}" updated to ${newStock}`);
-			setEditingStock((prev) => { const n = { ...prev }; delete n[item.id]; return n; });
+			setEditingStock((prev) => {
+				const n = { ...prev };
+				delete n[item.id];
+				return n;
+			});
 			await loadData();
 		} catch (e) {
 			setError(e.message || "Failed to update stock");
@@ -191,18 +192,22 @@ export default function AdminCatalogPage() {
 						</Link>
 					</div>
 				</div>
-				{error ? <p className='text-sm text-red-600'>{error}</p> : null}
-				{success ? <p className='text-sm text-green-700'>{success}</p> : null}
+				{error ?
+					<p className='text-sm text-red-600'>{error}</p>
+				:	null}
+				{success ?
+					<p className='text-sm text-green-700'>{success}</p>
+				:	null}
 			</Card>
 
 			{/* ── Dashboard stat cards ── */}
 			{dashboard && (
 				<div className='grid grid-cols-2 gap-4 sm:grid-cols-4'>
 					{[
-						{ label: "Total Items",    value: dashboard.totalItems,     color: "bg-blue-50 text-blue-700" },
-						{ label: "In Stock",       value: dashboard.availableItems,  color: "bg-green-50 text-green-700" },
-						{ label: "Out of Stock",   value: dashboard.outOfStockItems, color: "bg-red-50 text-red-700" },
-						{ label: "Low Stock (≤5)", value: dashboard.lowStockItems,   color: "bg-yellow-50 text-yellow-700" },
+						{ label: "Total Items", value: dashboard.totalItems, color: "bg-blue-50 text-blue-700" },
+						{ label: "In Stock", value: dashboard.availableItems, color: "bg-green-50 text-green-700" },
+						{ label: "Out of Stock", value: dashboard.outOfStockItems, color: "bg-red-50 text-red-700" },
+						{ label: "Low Stock (≤5)", value: dashboard.lowStockItems, color: "bg-yellow-50 text-yellow-700" },
 					].map((s) => (
 						<Card key={s.label} className={`text-center ${s.color}`}>
 							<p className='text-3xl font-bold'>{s.value}</p>
@@ -237,15 +242,13 @@ export default function AdminCatalogPage() {
 			{activeTab === "inventory" && (
 				<Card className='space-y-4'>
 					<h2 className='text-lg font-semibold text-slate-900'>All Catalog Items</h2>
-					{items.length === 0 ? (
+					{items.length === 0 ?
 						<p className='text-sm text-slate-500'>No items yet. Add some using the "Add Item" tab.</p>
-					) : (
-						<div className='overflow-x-auto'>
+					:	<div className='overflow-x-auto'>
 							<table className='min-w-full text-left text-sm'>
 								<thead>
 									<tr className='border-b border-brand-100 text-brand-800'>
 										<th className='py-2 pr-3'>Image</th>
-										<th className='py-2 pr-3'>Item ID</th>
 										<th className='py-2 pr-3'>Name</th>
 										<th className='py-2 pr-3'>Category</th>
 										<th className='py-2 pr-3'>Price</th>
@@ -257,7 +260,7 @@ export default function AdminCatalogPage() {
 								<tbody>
 									{items.map((item) => (
 										<tr key={item.id} className='border-b border-brand-50'>
-											{editingItem === item.id ? (
+											{editingItem === item.id ?
 												/* ── inline edit row ── */
 												<>
 													<td className='py-2 pr-3'>
@@ -269,88 +272,138 @@ export default function AdminCatalogPage() {
 															/>
 														</div>
 													</td>
-													<td className='py-2 pr-3 font-mono text-xs text-slate-500'>{item.itemId || "—"}</td>
 													<td className='py-2 pr-3'>
-														<input className='w-32 rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-400'
-															value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} />
+														<input
+															className='w-32 rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-400'
+															value={editForm.name}
+															onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+														/>
 													</td>
 													<td className='py-2 pr-3'>
-														<input className='w-24 rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-400'
-															value={editForm.category} onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))} />
+														<input
+															className='w-24 rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-400'
+															value={editForm.category}
+															onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))}
+														/>
 													</td>
 													<td className='py-2 pr-3'>
-														<input type='number' step='0.01' min='0' className='w-20 rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-400'
-															value={editForm.price} onChange={(e) => setEditForm((f) => ({ ...f, price: e.target.value }))} />
+														<input
+															type='number'
+															step='0.01'
+															min='0'
+															className='w-20 rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-400'
+															value={editForm.price}
+															onChange={(e) => setEditForm((f) => ({ ...f, price: e.target.value }))}
+														/>
 													</td>
 													<td className='py-2 pr-3'>
-														<input type='number' min='0' className='w-16 rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-400'
+														<input
+															type='number'
+															min='0'
+															className='w-16 rounded border px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-400'
 															value={editingStock[item.id] !== undefined ? editingStock[item.id] : item.stockCount}
-															onChange={(e) => setEditingStock((p) => ({ ...p, [item.id]: e.target.value }))} />
+															onChange={(e) => setEditingStock((p) => ({ ...p, [item.id]: e.target.value }))}
+														/>
 													</td>
 													<td className='py-2 pr-3'></td>
 													<td className='py-2 pr-3 flex gap-1'>
-														<button type='button' onClick={() => handleSaveItem(item)}
-															className='rounded bg-brand-600 px-2 py-1 text-xs text-white hover:bg-brand-700'>Save</button>
+														<button
+															type='button'
+															onClick={() => handleSaveItem(item)}
+															className='rounded bg-brand-600 px-2 py-1 text-xs text-white hover:bg-brand-700'>
+															Save
+														</button>
 														{editingStock[item.id] !== undefined && (
-															<button type='button' onClick={() => handleSaveStock(item)}
-																className='rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700'>Stock</button>
+															<button
+																type='button'
+																onClick={() => handleSaveStock(item)}
+																className='rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700'>
+																Stock
+															</button>
 														)}
-														<button type='button' onClick={() => setEditingItem(null)}
-															className='rounded bg-slate-200 px-2 py-1 text-xs text-slate-700 hover:bg-slate-300'>Cancel</button>
+														<button
+															type='button'
+															onClick={() => setEditingItem(null)}
+															className='rounded bg-slate-200 px-2 py-1 text-xs text-slate-700 hover:bg-slate-300'>
+															Cancel
+														</button>
 													</td>
 												</>
-											) : (
-												/* ── view row ── */
+											:	/* ── view row ── */
 												<>
 													<td className='py-2 pr-3'>
-														{item.imageUrl ? (
+														{item.imageUrl ?
 															// eslint-disable-next-line @next/next/no-img-element
-															<img src={item.imageUrl} alt={item.name} className='h-10 w-10 rounded-lg object-cover border border-slate-200' />
-														) : (
-															<div className='flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-400 text-lg'>🖼️</div>
-														)}
+															<img
+																src={item.imageUrl}
+																alt={item.name}
+																className='h-10 w-10 rounded-lg object-cover border border-slate-200'
+															/>
+														:	<div className='flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-400 text-lg'>
+																🖼️
+															</div>
+														}
 													</td>
-													<td className='py-2 pr-3 font-mono text-xs text-slate-500'>{item.itemId || "—"}</td>
 													<td className='py-2 pr-3 font-medium text-slate-900'>{item.name}</td>
 													<td className='py-2 pr-3 text-slate-600'>{item.category}</td>
 													<td className='py-2 pr-3'>{formatPrice(item.price)}</td>
 													<td className='py-2 pr-3'>
 														<div className='flex items-center gap-2'>
-															<input type='number' min='0'
+															<input
+																type='number'
+																min='0'
 																value={editingStock[item.id] !== undefined ? editingStock[item.id] : item.stockCount}
 																onChange={(e) => setEditingStock((p) => ({ ...p, [item.id]: e.target.value }))}
-																className='w-16 rounded border border-slate-300 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-400' />
+																className='w-16 rounded border border-slate-300 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-400'
+															/>
 															{editingStock[item.id] !== undefined && (
-																<button type='button' onClick={() => handleSaveStock(item)}
-																	className='rounded bg-brand-600 px-2 py-1 text-xs text-white hover:bg-brand-700'>Save</button>
+																<button
+																	type='button'
+																	onClick={() => handleSaveStock(item)}
+																	className='rounded bg-brand-600 px-2 py-1 text-xs text-white hover:bg-brand-700'>
+																	Save
+																</button>
 															)}
 														</div>
 													</td>
 													<td className='py-2 pr-3'>
-														<span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-															item.stockCount === 0 ? "bg-red-100 text-red-700" :
-															item.stockCount <= 5 ? "bg-yellow-100 text-yellow-700" :
-															"bg-green-100 text-green-700"
-														}`}>
-															{item.stockCount === 0 ? "Out of stock" : item.stockCount <= 5 ? "Low" : "In stock"}
+														<span
+															className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+																item.stockCount === 0 ? "bg-red-100 text-red-700"
+																: item.stockCount <= 5 ? "bg-yellow-100 text-yellow-700"
+																: "bg-green-100 text-green-700"
+															}`}>
+															{item.stockCount === 0 ?
+																"Out of stock"
+															: item.stockCount <= 5 ?
+																"Low"
+															:	"In stock"}
 														</span>
 													</td>
 													<td className='py-2 pr-3'>
 														<div className='flex gap-1'>
-															<button type='button' onClick={() => startEditItem(item)}
-																className='rounded bg-brand-100 px-2 py-1 text-xs text-brand-700 hover:bg-brand-200'>Edit</button>
-															<button type='button' onClick={() => handleDelete(item)}
-																className='rounded bg-red-100 px-2 py-1 text-xs text-red-700 hover:bg-red-200'>Delete</button>
+															<button
+																type='button'
+																onClick={() => startEditItem(item)}
+																className='rounded bg-brand-100 px-2 py-1 text-xs text-brand-700 hover:bg-brand-200'>
+																Edit
+															</button>
+															<button
+																type='button'
+																onClick={() => handleDelete(item)}
+																className='rounded bg-red-100 px-2 py-1 text-xs text-red-700 hover:bg-red-200'>
+																Delete
+															</button>
 														</div>
 													</td>
 												</>
-											)}
+											}
 										</tr>
 									))}
 								</tbody>
 							</table>
 						</div>
-					)}
+					}
 				</Card>
 			)}
 
@@ -359,24 +412,47 @@ export default function AdminCatalogPage() {
 				<Card className='space-y-4'>
 					<h2 className='text-lg font-semibold text-slate-900'>Add New Item to Catalog</h2>
 					<form className='grid gap-4 sm:grid-cols-2' onSubmit={handleAddItem}>
-						<Input label='Item Name *' value={itemForm.name}
-							onChange={(e) => setItemForm((f) => ({ ...f, name: e.target.value }))} required />
-						<Input label='Category *' placeholder='e.g. Main, Drinks, Desserts' value={itemForm.category}
-							onChange={(e) => setItemForm((f) => ({ ...f, category: e.target.value }))} required />
-						<Input label='Price ($) *' type='number' step='0.01' min='0' value={itemForm.price}
-							onChange={(e) => setItemForm((f) => ({ ...f, price: e.target.value }))} required />
-						<Input label='Initial Stock *' type='number' min='0' value={itemForm.stockCount}
-							onChange={(e) => setItemForm((f) => ({ ...f, stockCount: e.target.value }))} required />
-						<Input label='Description' value={itemForm.description}
-							onChange={(e) => setItemForm((f) => ({ ...f, description: e.target.value }))} />
+						<Input
+							label='Item Name *'
+							value={itemForm.name}
+							onChange={(e) => setItemForm((f) => ({ ...f, name: e.target.value }))}
+							required
+						/>
+						<Input
+							label='Category *'
+							placeholder='e.g. Main, Drinks, Desserts'
+							value={itemForm.category}
+							onChange={(e) => setItemForm((f) => ({ ...f, category: e.target.value }))}
+							required
+						/>
+						<Input
+							label='Price ($) *'
+							type='number'
+							step='0.01'
+							min='0'
+							value={itemForm.price}
+							onChange={(e) => setItemForm((f) => ({ ...f, price: e.target.value }))}
+							required
+						/>
+						<Input
+							label='Initial Stock *'
+							type='number'
+							min='0'
+							value={itemForm.stockCount}
+							onChange={(e) => setItemForm((f) => ({ ...f, stockCount: e.target.value }))}
+							required
+						/>
+						<Input
+							label='Description'
+							value={itemForm.description}
+							onChange={(e) => setItemForm((f) => ({ ...f, description: e.target.value }))}
+						/>
 						<div className='sm:col-span-2'>
 							<ImageUpload
 								value={itemForm.imageUrl}
 								onChange={(url) => setItemForm((f) => ({ ...f, imageUrl: url }))}
 							/>
 						</div>
-						<Input label='Custom Item ID (optional)' placeholder='e.g. ITEM-0010' value={itemForm.itemId}
-							onChange={(e) => setItemForm((f) => ({ ...f, itemId: e.target.value }))} />
 						<div className='flex items-end sm:col-span-2'>
 							<Button type='submit' disabled={saving} className='w-full sm:w-auto'>
 								{saving ? "Adding…" : "Add to Catalog"}

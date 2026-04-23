@@ -31,8 +31,6 @@ services:
     build:
       context: ./auth-service
       dockerfile: Dockerfile
-    ports:
-      - "8081:8081"
     environment:
       - JWT_SECRET=your-super-secret-key-change-in-production-env
       - DATABASE_URL=jdbc:postgresql://ep-bitter-heart-aogzv7s0.c-2.ap-southeast-1.aws.neon.tech:5432/neondb?sslmode=require
@@ -51,8 +49,6 @@ services:
     build:
       context: ./catalog-service
       dockerfile: Dockerfile
-    ports:
-      - "8082:8082"
     environment:
       - JWT_SECRET=your-super-secret-key-change-in-production-env
       - SERVICE_AUTH_URL=http://auth-service:8081
@@ -74,8 +70,6 @@ services:
     build:
       context: ./order-service
       dockerfile: Dockerfile
-    ports:
-      - "8083:8083"
     environment:
       - JWT_SECRET=your-super-secret-key-change-in-production-env
       - SERVICE_AUTH_URL=http://auth-service:8081
@@ -100,8 +94,6 @@ services:
     build:
       context: ./payment-service
       dockerfile: Dockerfile
-    ports:
-      - "8084:8084"
     environment:
       - JWT_SECRET=your-super-secret-key-change-in-production-env
       - SERVICE_AUTH_URL=http://auth-service:8081

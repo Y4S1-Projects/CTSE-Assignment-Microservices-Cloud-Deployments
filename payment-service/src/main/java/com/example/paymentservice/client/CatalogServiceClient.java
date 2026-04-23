@@ -1,5 +1,8 @@
 package com.example.paymentservice.client;
 
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.web.client.RestClientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +19,8 @@ import java.util.Map;
 @Component
 public class CatalogServiceClient {
     private static final Logger logger = LoggerFactory.getLogger(CatalogServiceClient.class);
+    private static final String SERVICE_ROLE_HEADER = "X-Service-Role";
+    private static final String SERVICE_PAYMENT_ROLE = "SERVICE_PAYMENT";
 
     private final RestTemplate restTemplate;
     private final String catalogServiceUrl;
@@ -42,10 +47,12 @@ public class CatalogServiceClient {
                     .toUriString();
 
             logger.info("Decrementing stock for item {} by {}", itemId, quantity);
-            Map<String, Object> response = restTemplate.postForObject(url, null, Map.class);
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(SERVICE_ROLE_HEADER, SERVICE_PAYMENT_ROLE);
+            Map<String, Object> response = restTemplate.postForObject(url, new HttpEntity<>(headers), Map.class);
             logger.info("Stock decremented successfully for item {}", itemId);
             return response;
-        } catch (Exception e) {
+        } catch (RestClientException | IllegalArgumentException e) {
             logger.error("Failed to decrement stock for item {}: {}", itemId, e.getMessage());
             return null;
         }
@@ -62,7 +69,7 @@ public class CatalogServiceClient {
                     .buildAndExpand(itemId)
                     .toUriString();
             return restTemplate.getForObject(url, Map.class);
-        } catch (Exception e) {
+        } catch (RestClientException | IllegalArgumentException e) {
             logger.error("Failed to fetch item {}: {}", itemId, e.getMessage());
             return null;
         }

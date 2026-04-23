@@ -2,14 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Button from "@/components/common/Button";
 import Card from "@/components/common/Card";
-import Input from "@/components/common/Input";
 import { getAllOrders, updateOrderStatus } from "@/lib/foodService";
 import { getAuthToken, isAdminUser } from "@/lib/storage";
 
 function formatPrice(value) {
 	return `$${Number(value || 0).toFixed(2)}`;
+}
+
+function describeOrderChoice(order) {
+	const itemName = order.itemName || "Order";
+	const amount = formatPrice(order.amount);
+	const method = order.paymentMethod || "Payment";
+	const date = order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "Recent";
+	return `${itemName} • ${amount} • ${method} • ${date}`;
 }
 
 export default function AdminOrdersPage() {
@@ -50,7 +58,7 @@ export default function AdminOrdersPage() {
 		setSuccess("");
 		try {
 			await updateOrderStatus(orderId, orderStatus);
-			setSuccess(`Order ${orderId} updated to ${orderStatus}`);
+			setSuccess(`Selected order updated to ${orderStatus}`);
 			setOrderId("");
 			await loadOrders();
 		} catch (err) {
@@ -95,8 +103,6 @@ export default function AdminOrdersPage() {
 						<table className='min-w-full text-sm text-left'>
 							<thead>
 								<tr className='border-b border-brand-100 text-brand-800'>
-									<th className='py-2 pr-4'>Reference</th>
-									<th className='py-2 pr-4'>Item ID</th>
 									<th className='py-2 pr-4'>Item Name</th>
 									<th className='py-2 pr-4'>Qty</th>
 									<th className='py-2 pr-4'>Amount</th>
@@ -104,13 +110,12 @@ export default function AdminOrdersPage() {
 									<th className='py-2 pr-4'>Status</th>
 									<th className='py-2 pr-4'>Checkout</th>
 									<th className='py-2 pr-4'>Date</th>
+									<th className='py-2 pr-4'>Details</th>
 								</tr>
 							</thead>
 							<tbody>
 								{orders.map((order) => (
 									<tr key={order.id} className='border-b border-brand-50 text-slate-700 hover:bg-brand-50'>
-										<td className='py-2 pr-4 font-mono text-xs'>{order.reference || order.id?.slice(0, 8)}</td>
-										<td className='py-2 pr-4 font-mono text-xs'>{order.itemId}</td>
 										<td className='py-2 pr-4'>{order.itemName || "—"}</td>
 										<td className='py-2 pr-4'>{order.quantity}</td>
 										<td className='py-2 pr-4 font-semibold'>{formatPrice(order.amount)}</td>
@@ -137,6 +142,15 @@ export default function AdminOrdersPage() {
 										<td className='py-2 pr-4 text-xs text-slate-500'>
 											{order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "—"}
 										</td>
+										<td className='py-2 pr-4'>
+											{order.orderId ?
+												<Link
+													className='text-sm font-medium text-brand-700 hover:underline'
+													href={`/admin/orders/${order.orderId}`}>
+													View details
+												</Link>
+											:	"—"}
+										</td>
 									</tr>
 								))}
 							</tbody>
@@ -149,13 +163,21 @@ export default function AdminOrdersPage() {
 			<Card className='space-y-4'>
 				<h2 className='text-lg font-semibold text-slate-900'>Update Order Status</h2>
 				<form className='grid gap-3 sm:grid-cols-3' onSubmit={handleOrderStatus}>
-					<Input
-						label='Order ID'
-						value={orderId}
-						onChange={(event) => setOrderId(event.target.value)}
-						placeholder='Enter order ID...'
-						required
-					/>
+					<label className='block space-y-1.5 sm:col-span-2'>
+						<span className='text-sm font-medium text-slate-700'>Order</span>
+						<select
+							value={orderId}
+							onChange={(event) => setOrderId(event.target.value)}
+							className='w-full rounded-xl border border-brand-200 bg-white px-3.5 py-2.5 text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200'
+							required>
+							<option value=''>Select an order</option>
+							{orders.map((order) => (
+								<option key={order.orderId || order.id} value={order.orderId || order.id}>
+									{describeOrderChoice(order)}
+								</option>
+							))}
+						</select>
+					</label>
 					<label className='block space-y-1.5'>
 						<span className='text-sm font-medium text-slate-700'>New Status</span>
 						<select
