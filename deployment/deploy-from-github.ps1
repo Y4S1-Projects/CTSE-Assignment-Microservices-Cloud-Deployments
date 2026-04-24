@@ -4,7 +4,7 @@
 param(
     [string]$AppPrefix = "ctse-assignment",
     [string]$ResourceGroup = "ctse-assignment",
-    [string]$Location = "eastus",
+    [string]$Location = "southeastasia",
     [string]$EnvironmentName = "ctse-assignment-env",
     [string]$GitHubRepo = "y4s1-projects/ctse-assignment-microservices-cloud-deployments",
     [string]$ImageTag = "latest",
@@ -18,6 +18,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ResolvedAppNames = @{}
+
+# In PowerShell 7+, avoid turning non-fatal native stderr (CLI warnings) into terminating errors.
+if ($PSVersionTable.PSVersion.Major -ge 7) {
+    $PSNativeCommandUseErrorActionPreference = $false
+}
 
 function Write-Section {
     param([string]$Message)
@@ -38,8 +43,12 @@ function Get-PreferredAppName {
 function Test-ContainerAppExists {
     param([string]$Name)
 
-    & az containerapp show --name $Name --resource-group $ResourceGroup --output none 2>$null | Out-Null
-    return $LASTEXITCODE -eq 0
+    $count = az containerapp list --resource-group $ResourceGroup --query "[?name=='$Name'] | length(@)" --output tsv --only-show-errors 2>$null
+    if ([string]::IsNullOrWhiteSpace($count)) {
+        return $false
+    }
+
+    return [int]$count -gt 0
 }
 
 function Resolve-AppName {
@@ -115,12 +124,11 @@ function Build-EnvVarArgs {
 }
 
 function Get-RegistryArgs {
-    $args = @("--registry-server", "ghcr.io")
     if (-not [string]::IsNullOrWhiteSpace($GitHubUsername) -and -not [string]::IsNullOrWhiteSpace($GitHubToken)) {
-        $args += @("--registry-username", $GitHubUsername, "--registry-password", $GitHubToken)
+        return @("--registry-server", "ghcr.io", "--registry-username", $GitHubUsername, "--registry-password", $GitHubToken)
     }
 
-    return $args
+    return @()
 }
 
 function Deploy-ContainerApp {
@@ -281,49 +289,72 @@ Write-Host "  Payment: $($ResolvedAppNames['payment-service'])" -ForegroundColor
 
 Write-Section "Step 5: Deploy Backend Services"
 
+# ── 5a. Deploy auth-service first (other services depend on it) ──
 $authEnvVars = @{
-    JWT_SECRET = $JwtSecret
-    DATABASE_URL = $DatabaseUrl
-    DATABASE_USER = $DatabaseUser
-    DATABASE_PASSWORD = $DatabasePassword
-}
-
-$catalogEnvVars = @{
-    JWT_SECRET = $JwtSecret
-    DATABASE_URL = $DatabaseUrl
-    DATABASE_USER = $DatabaseUser
-    DATABASE_PASSWORD = $DatabasePassword
-}
-
-$orderEnvVars = @{
-    JWT_SECRET = $JwtSecret
-    DATABASE_URL = $DatabaseUrl
-    DATABASE_USER = $DatabaseUser
-    DATABASE_PASSWORD = $DatabasePassword
-}
-
-$paymentEnvVars = @{
-    JWT_SECRET = $JwtSecret
-    DATABASE_URL = $DatabaseUrl
-    DATABASE_USER = $DatabaseUser
-    DATABASE_PASSWORD = $DatabasePassword
+    JWT_SECRET                    = $JwtSecret
+    DATABASE_URL                  = $DatabaseUrl
+    DATABASE_USER                 = $DatabaseUser
+    DATABASE_PASSWORD             = $DatabasePassword
+    ADMIN_BOOTSTRAP_ENABLED       = "true"
+    CUSTOMER_BOOTSTRAP_ENABLED    = "true"
+    ADMIN_PASSWORD                = "Admin@12345"
+    CUSTOMER_PASSWORD             = "Customer@12345"
 }
 
 Deploy-ContainerApp -ServiceName "auth-service" -Port 8081 -Ingress "internal" -EnvVars $authEnvVars
-Deploy-ContainerApp -ServiceName "catalog-service" -Port 8082 -Ingress "internal" -EnvVars $catalogEnvVars
-Deploy-ContainerApp -ServiceName "order-service" -Port 8083 -Ingress "internal" -EnvVars $orderEnvVars
-Deploy-ContainerApp -ServiceName "payment-service" -Port 8084 -Ingress "internal" -EnvVars $paymentEnvVars
 
-$authServiceUrl = "http://$($ResolvedAppNames['auth-service'])"
+# ── 5b. Resolve internal FQDNs so remaining services can reach each other ──
+$authServiceUrl    = "http://$($ResolvedAppNames['auth-service'])"
 $catalogServiceUrl = "http://$($ResolvedAppNames['catalog-service'])"
-$orderServiceUrl = "http://$($ResolvedAppNames['order-service'])"
+$orderServiceUrl   = "http://$($ResolvedAppNames['order-service'])"
 $paymentServiceUrl = "http://$($ResolvedAppNames['payment-service'])"
 
+Write-Host ""
+Write-Host "Internal service URLs:" -ForegroundColor White
+Write-Host "  Auth:    $authServiceUrl" -ForegroundColor Gray
+Write-Host "  Catalog: $catalogServiceUrl" -ForegroundColor Gray
+Write-Host "  Order:   $orderServiceUrl" -ForegroundColor Gray
+Write-Host "  Payment: $paymentServiceUrl" -ForegroundColor Gray
+
+# ── 5c. Deploy catalog-service (needs auth) ──
+$catalogEnvVars = @{
+    JWT_SECRET        = $JwtSecret
+    DATABASE_URL      = $DatabaseUrl
+    DATABASE_USER     = $DatabaseUser
+    DATABASE_PASSWORD = $DatabasePassword
+    SERVICE_AUTH_URL  = $authServiceUrl
+}
+Deploy-ContainerApp -ServiceName "catalog-service" -Port 8082 -Ingress "internal" -EnvVars $catalogEnvVars
+
+# ── 5d. Deploy order-service (needs auth, catalog, payment) ──
+$orderEnvVars = @{
+    JWT_SECRET          = $JwtSecret
+    DATABASE_URL        = $DatabaseUrl
+    DATABASE_USER       = $DatabaseUser
+    DATABASE_PASSWORD   = $DatabasePassword
+    SERVICE_AUTH_URL    = $authServiceUrl
+    SERVICE_CATALOG_URL = $catalogServiceUrl
+    SERVICE_PAYMENT_URL = $paymentServiceUrl
+}
+Deploy-ContainerApp -ServiceName "order-service" -Port 8083 -Ingress "internal" -EnvVars $orderEnvVars
+
+# ── 5e. Deploy payment-service (needs auth, order) ──
+$paymentEnvVars = @{
+    JWT_SECRET        = $JwtSecret
+    DATABASE_URL      = $DatabaseUrl
+    DATABASE_USER     = $DatabaseUser
+    DATABASE_PASSWORD = $DatabasePassword
+    SERVICE_AUTH_URL  = $authServiceUrl
+    SERVICE_ORDER_URL = $orderServiceUrl
+}
+Deploy-ContainerApp -ServiceName "payment-service" -Port 8084 -Ingress "internal" -EnvVars $paymentEnvVars
+
+# ── 5f. Deploy api-gateway (external facing, routes to all backend services) ──
 Deploy-ContainerApp -ServiceName "api-gateway" -Port 8080 -Ingress "external" -EnvVars @{
-    AUTH_SERVICE_URL = $authServiceUrl
+    AUTH_SERVICE_URL    = $authServiceUrl
     CATALOG_SERVICE_URL = $catalogServiceUrl
-    JWT_SECRET = $JwtSecret
-    ORDER_SERVICE_URL = $orderServiceUrl
+    JWT_SECRET          = $JwtSecret
+    ORDER_SERVICE_URL   = $orderServiceUrl
     PAYMENT_SERVICE_URL = $paymentServiceUrl
 }
 
@@ -335,8 +366,8 @@ if ([string]::IsNullOrWhiteSpace($gatewayUrl)) {
 Write-Section "Step 6: Deploy Frontend"
 Deploy-ContainerApp -ServiceName "frontend" -Port 3000 -Ingress "external" -Cpu "0.25" -Memory "0.5Gi" -EnvVars @{
     NEXT_PUBLIC_API_BASE_URL = "https://$gatewayUrl"
-    NODE_ENV = "production"
-    PORT = "3000"
+    NODE_ENV                 = "production"
+    PORT                     = "3000"
 }
 
 Show-Result
