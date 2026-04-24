@@ -128,6 +128,7 @@ function Get-RegistryArgs {
         return @("--registry-server", "ghcr.io", "--registry-username", $GitHubUsername, "--registry-password", $GitHubToken)
     }
 
+    Write-Host "No GitHub registry credentials provided; deploying with public GHCR image access only." -ForegroundColor Yellow
     return @()
 }
 
@@ -205,11 +206,19 @@ function Get-AppFqdn {
     param([string]$ServiceName)
 
     $appName = $ResolvedAppNames[$ServiceName]
-    try {
-        return az containerapp show --name $appName --resource-group $ResourceGroup --query "properties.configuration.ingress.fqdn" --output tsv 2>$null
-    } catch {
-        return ""
+    for ($attempt = 1; $attempt -le 10; $attempt++) {
+        try {
+            $fqdn = az containerapp show --name $appName --resource-group $ResourceGroup --query "properties.configuration.ingress.fqdn" --output tsv --only-show-errors 2>$null
+            if (-not [string]::IsNullOrWhiteSpace($fqdn)) {
+                return $fqdn
+            }
+        } catch {
+        }
+
+        Start-Sleep -Seconds 3
     }
+
+    return ""
 }
 
 function Show-Result {
@@ -365,6 +374,7 @@ if ([string]::IsNullOrWhiteSpace($gatewayUrl)) {
 
 Write-Section "Step 6: Deploy Frontend"
 Deploy-ContainerApp -ServiceName "frontend" -Port 3000 -Ingress "external" -Cpu "0.25" -Memory "0.5Gi" -EnvVars @{
+    NEXT_PUBLIC_API_URL     = "https://$gatewayUrl"
     NEXT_PUBLIC_API_BASE_URL = "https://$gatewayUrl"
     NODE_ENV                 = "production"
     PORT                     = "3000"

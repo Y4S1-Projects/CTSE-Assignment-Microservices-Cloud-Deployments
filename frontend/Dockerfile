@@ -13,8 +13,9 @@ RUN npm ci
 COPY . .
 
 # Build the Next.js app
-# Environment variables can be passed at build time
-ARG NEXT_PUBLIC_API_URL=http://localhost:8080
+# Environment variables can be passed at build time.
+# Leave the API base empty here so the deployed container can inject the gateway URL at runtime.
+ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN npm run build
 

@@ -3,6 +3,10 @@ import { clearAuthSession, getAuthToken, getCurrentUser, getRefreshToken, saveAu
 let cachedGatewayBase = null;
 let gatewayBasePromise = null;
 
+function getLocalDevFallbackBase() {
+	return process.env.NODE_ENV === "production" ? "" : "http://localhost:8080";
+}
+
 function normalizeBaseUrl(value) {
 	return typeof value === "string" ? value.replace(/\/$/, "") : "";
 }
@@ -36,10 +40,10 @@ async function resolveGatewayBase() {
 		return cachedGatewayBase;
 	}
 
-	if (typeof window === "undefined") {
+	if (globalThis.window === undefined) {
 		cachedGatewayBase =
 			coerceToGatewayBase(process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL) ||
-			"http://localhost:8080";
+			getLocalDevFallbackBase();
 		return cachedGatewayBase;
 	}
 
@@ -62,7 +66,7 @@ async function resolveGatewayBase() {
 		coerceToGatewayBase(config?.apiBaseUrl) ||
 		coerceToGatewayBase(process.env.NEXT_PUBLIC_API_URL) ||
 		coerceToGatewayBase(process.env.NEXT_PUBLIC_API_BASE_URL) ||
-		"http://localhost:8080";
+		getLocalDevFallbackBase();
 	return cachedGatewayBase;
 }
 
@@ -76,8 +80,11 @@ async function performRequest(gatewayBase, path, options = {}, canRetryAuth = tr
 	const headers = {
 		"Content-Type": "application/json",
 		...(token ? { Authorization: `Bearer ${token}` } : {}),
-		...(options.headers || {}),
 	};
+
+	if (options.headers) {
+		Object.assign(headers, options.headers);
+	}
 
 	let response;
 	try {
