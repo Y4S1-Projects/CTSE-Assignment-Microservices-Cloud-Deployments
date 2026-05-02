@@ -87,6 +87,8 @@ public class OrderController {
         return ResponseEntity.ok(order);
     }
 
+    //Test comment
+
     /** GET /orders/my */
     @GetMapping({ "/my", "/my/" })
     @Operation(summary = "Get my orders", description = "Retrieve all orders for the current user (requires authentication)")
